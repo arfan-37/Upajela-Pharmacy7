@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
 
-export default function Header({ currentRole, setCurrentRole }) {
+export default function Header({ currentRole, onLogout }) {
   return (
     <header className="app-header">
       <div className="header-logo">
@@ -20,11 +20,11 @@ export default function Header({ currentRole, setCurrentRole }) {
               {currentRole === 'Admin' ? '🛡️ Admin (Shabab)' : '🧑‍⚕️ Staff (Assistant)'}
             </span>
             <button 
-              className="btn btn-secondary btn-sm switch-role-btn" 
-              onClick={() => setCurrentRole(currentRole === 'Admin' ? 'Staff' : 'Admin')}
-              title="Toggle role for testing permissions"
+              className="btn btn-secondary btn-sm logout-btn" 
+              onClick={onLogout}
+              title="Log out of system"
             >
-              🔄 Switch Role
+              🚪 Log Out
             </button>
           </div>
         </div>

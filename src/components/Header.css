@@ -100,7 +100,7 @@
   border: 1px solid rgba(14, 165, 233, 0.3);
 }
 
-.switch-role-btn {
+.logout-btn {
   font-size: 11px;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
@@ -108,8 +108,8 @@
   transition: all var(--transition-fast);
 }
 
-.switch-role-btn:hover {
-  background-color: var(--accent);
-  border-color: var(--accent);
+.logout-btn:hover {
+  background-color: var(--danger);
+  border-color: var(--danger);
   color: white;
 }

@@ -5,10 +5,20 @@ import Dashboard from './components/Dashboard';
 import POS from './components/POS';
 import Inventory from './components/Inventory';
 import Reports from './components/Reports';
+import Login from './components/Login';
 import { initialMedicines, initialTransactions } from './utils/mockData';
 import './App.css';
 
 function App() {
+  // Authentication States
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('shabab_logged_in') === 'true';
+  });
+
+  const [currentRole, setCurrentRole] = useState(() => {
+    return localStorage.getItem('shabab_role') || 'Staff';
+  });
+
   // Global States (preserves state across browser tabs using localStorage)
   const [medicines, setMedicines] = useState(() => {
     const saved = localStorage.getItem('shabab_medicines');
@@ -21,7 +31,6 @@ function App() {
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentRole, setCurrentRole] = useState('Admin'); // Can switch between 'Admin' and 'Staff'
 
   // Persist states to Local Storage on change
   useEffect(() => {
@@ -38,6 +47,20 @@ function App() {
       setActiveTab('dashboard');
     }
   }, [currentRole, activeTab]);
+
+  // Authentication Handlers
+  const handleLogin = (role) => {
+    setCurrentRole(role);
+    setIsLoggedIn(true);
+    localStorage.setItem('shabab_role', role);
+    localStorage.setItem('shabab_logged_in', 'true');
+    setActiveTab('dashboard'); // reset to dashboard on login
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('shabab_logged_in');
+  };
 
   // Inventory Management State Mutation handlers
   const handleAddMedicine = (newMed) => {
@@ -122,6 +145,11 @@ function App() {
     }
   };
 
+  // Render Login view if session is not authenticated
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={handleLogin} />;
+  }
+
   return (
     <div className="app-container">
       {/* Sidebar Panel Navigation */}
@@ -135,7 +163,7 @@ function App() {
       <div className="main-content">
         <Header 
           currentRole={currentRole} 
-          setCurrentRole={setCurrentRole} 
+          onLogout={handleLogout} 
         />
         {renderActiveView()}
       </div>
