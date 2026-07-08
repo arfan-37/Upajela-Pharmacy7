@@ -1,16 +1,66 @@
-# React + Vite
+# Shabab er Dokan - Pharmacy Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A premium, modern, and high-fidelity Pharmacy Management & POS System built for **Shabab er Dokan**. This application runs entirely in the browser as a fast Single Page Application (SPA) and uses `localStorage` for complete offline capability and data persistence.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. **Role-Based Access Control (RBAC):**
+   * **Admin Mode (Shabab):** Full visibility into financial metrics (Revenue, Costs, and Net Profits), interactive SVG charts displaying sales performance, and access to add/modify/delete medicine inventory items.
+   * **Staff Mode (Assistant):** Hidden financial numbers, disabled access to reports, and read-only inventory lookup. Staff can operate the POS station to enter sales information.
+2. **Point of Sale (POS) Billing:**
+   * Rapid search by Brand name, Generic name (chemical compound), or Category.
+   * Restrict additions to cart based on actual stock limits.
+   * Interactive subtotaling, custom discounts, VAT (5%) calculation, cash input, and change due tracking.
+3. **Thermal Receipt Printing:**
+   * Overlay invoice mockup with printable CSS formatting (`@media print`) optimized for standard 80mm POS thermal receipt printers.
+4. **Alerts System:**
+   * Low Stock alerts (whenever items drop below 15 units).
+   * Expiry date warning list showing expired batches or those expiring within 3 months.
+5. **Initial Seeding:**
+   * Pre-populated with standard local medicines (e.g. Napa Extend, Seclo 20, Fexo 120, Sergel 20) for instant demonstration.
 
-## React Compiler
+## Technologies Used
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Vite + React** (Frontend Library & Build Tool)
+* **Vanilla CSS** (Component modular styling and design system tokens)
+* **HTML5 Canvas / inline SVG** (For custom analytics graphs)
+* **LocalStorage API** (Persistent state storage)
 
-## Expanding the Oxlint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Follow these steps to run the application locally on your machine:
+
+### Prerequisites
+
+Ensure you have [Node.js](https://nodejs.org/) installed (recommended LTS version).
+
+### Installation
+
+1. Clone this repository (or copy the files):
+   ```bash
+   git clone https://github.com/SaifHassanEmon/Pharmacy-management-System.git
+   cd "Shabab er Dokan"
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the local development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open your browser and navigate to the address shown in the terminal (usually `http://localhost:5173`).
+
+## Production Build
+
+To bundle the application for production:
+```bash
+npm run build
+```
+The output files will be written to the `dist/` directory, which can be hosted on static platforms like Netlify, Vercel, or GitHub Pages.
+
+---
+*Created with ❤️ for Shabab er Dokan.*
