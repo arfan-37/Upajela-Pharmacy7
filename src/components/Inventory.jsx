@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import './Inventory.css';
 
-export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole }) {
+export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole, alertFilter, setAlertFilter }) {
   const TODAY = '2026-07-09';
   const THREE_MONTHS_LATER = '2026-10-09';
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [alertFilter, setAlertFilter] = useState('All'); // All, Low Stock, Expiring/Expired
+  // alertFilter and setAlertFilter are managed globally via props
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

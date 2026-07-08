@@ -31,6 +31,7 @@ function App() {
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [inventoryFilter, setInventoryFilter] = useState('All');
 
   // Persist states to Local Storage on change
   useEffect(() => {
@@ -104,6 +105,7 @@ function App() {
             transactions={transactions}
             currentRole={currentRole}
             setActiveTab={setActiveTab}
+            setInventoryFilter={setInventoryFilter}
           />
         );
       case 'pos':
@@ -123,6 +125,8 @@ function App() {
             onUpdateMedicine={handleUpdateMedicine}
             onDeleteMedicine={handleDeleteMedicine}
             currentRole={currentRole}
+            alertFilter={inventoryFilter}
+            setAlertFilter={setInventoryFilter}
           />
         );
       case 'reports':
@@ -155,7 +159,12 @@ function App() {
       {/* Sidebar Panel Navigation */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'inventory') {
+            setInventoryFilter('All');
+          }
+        }} 
         currentRole={currentRole} 
       />
       

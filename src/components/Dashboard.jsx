@@ -1,7 +1,7 @@
 import React from 'react';
 import './Dashboard.css';
 
-export default function Dashboard({ medicines, transactions, currentRole, setActiveTab }) {
+export default function Dashboard({ medicines, transactions, currentRole, setActiveTab, setInventoryFilter }) {
   const TODAY = '2026-07-09';
   const THREE_MONTHS_LATER = '2026-10-09';
 
@@ -49,6 +49,25 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         <p className="welcome-text">Here is what's happening at Shabab er Dokan today.</p>
       </div>
 
+      {urgentExpiryCount > 0 && (
+        <div 
+          className="expiry-alert-banner" 
+          onClick={() => { 
+            setInventoryFilter('Expiring/Expired'); 
+            setActiveTab('inventory'); 
+          }}
+          title="Click to view expiring medicines"
+        >
+          <div className="banner-content">
+            <span className="banner-icon">🚨</span>
+            <span className="banner-text">
+              <strong>Expiry Alert:</strong> You have {urgentExpiryCount} medicine batches that are expired or expiring within 3 months! Click here to review them.
+            </span>
+          </div>
+          <span className="banner-action">View Products &rarr;</span>
+        </div>
+      )}
+
       {/* KPI Cards Grid */}
       <div className="kpi-grid">
         {currentRole === 'Admin' && (
@@ -84,7 +103,14 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
           </div>
         </div>
 
-        <div className="glass-card kpi-card warning-border">
+        <div 
+          className="glass-card kpi-card warning-border clickable-kpi"
+          onClick={() => {
+            setInventoryFilter('Low Stock');
+            setActiveTab('inventory');
+          }}
+          title="Click to view low stock medicines"
+        >
           <div className="kpi-icon warning-icon">⚠️</div>
           <div className="kpi-data">
             <span className="kpi-title">Low Stock Items</span>
@@ -93,7 +119,14 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
           </div>
         </div>
 
-        <div className="glass-card kpi-card danger-border">
+        <div 
+          className="glass-card kpi-card danger-border clickable-kpi"
+          onClick={() => {
+            setInventoryFilter('Expiring/Expired');
+            setActiveTab('inventory');
+          }}
+          title="Click to view expiring medicines"
+        >
           <div className="kpi-icon danger-icon">⏰</div>
           <div className="kpi-data">
             <span className="kpi-title">Expiry Warnings</span>

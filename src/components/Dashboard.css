@@ -247,3 +247,88 @@
   font-size: 12px;
   color: var(--text-muted);
 }
+
+.clickable-kpi {
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.clickable-kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.clickable-kpi.warning-border:hover {
+  border-color: var(--warning);
+}
+
+.clickable-kpi.danger-border:hover {
+  border-color: var(--danger);
+}
+
+/* Pulsing Expiry Banner */
+.expiry-alert-banner {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.15) 0%, rgba(225, 29, 72, 0.05) 100%);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.15);
+  animation: banner-pulse 3s infinite alternate;
+}
+
+.expiry-alert-banner:hover {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.22) 0%, rgba(225, 29, 72, 0.1) 100%);
+  box-shadow: 0 0 18px rgba(225, 29, 72, 0.3);
+  transform: scale(1.005);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-icon {
+  font-size: 20px;
+  animation: alarm-swing 0.5s infinite alternate;
+}
+
+.banner-text {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.banner-text strong {
+  color: #fda4af;
+}
+
+.banner-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  background-color: var(--danger-light);
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.expiry-alert-banner:hover .banner-action {
+  background-color: var(--danger);
+  color: white;
+}
+
+@keyframes banner-pulse {
+  0% { box-shadow: 0 0 10px rgba(225, 29, 72, 0.15); }
+  100% { box-shadow: 0 0 20px rgba(225, 29, 72, 0.35); }
+}
+
+@keyframes alarm-swing {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
