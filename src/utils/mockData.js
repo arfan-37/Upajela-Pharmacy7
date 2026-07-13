@@ -140,7 +140,7 @@ export const initialTransactions = [
   {
     id: "TX-1002",
     timestamp: "2026-07-08T14:22:10Z",
-    salesperson: "Shabab (Admin)",
+    salesperson: "Upajela (Admin)",
     items: [
       { id: "MED-006", name: "Alatrol 10", quantity: 30, price: 3.50, cost: 2.70 },
       { id: "MED-004", name: "Tusca Syrup", quantity: 1, price: 85.00, cost: 70.00 },

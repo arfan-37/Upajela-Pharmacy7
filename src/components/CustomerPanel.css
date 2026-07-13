@@ -1,0 +1,197 @@
+.customer-panel-summary {
+  margin-bottom: 16px;
+}
+
+.customer-summary-card {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-amount {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.customer-panel-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+}
+
+.customer-form-card,
+.customer-list-card {
+  padding: 24px;
+}
+
+.customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customer-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.customer-feedback {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.customer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.customer-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.customer-list-header input {
+  max-width: 260px;
+}
+
+.reminder-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.reminder-panel {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+
+.warning-panel {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.danger-panel {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.reminder-panel h4 {
+  margin: 0 0 4px;
+}
+
+.reminder-panel p {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.reminder-item {
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.customer-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.2s ease;
+}
+
+.customer-card-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.customer-card-red {
+  background: #b91c1c;
+  color: white;
+  animation: pulse-alert 1.2s infinite;
+}
+
+.customer-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.customer-card h4 {
+  margin: 0 0 8px;
+}
+
+.customer-card p {
+  margin: 4px 0;
+}
+
+.status-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.status-pill.yellow {
+  background: #fde68a;
+  color: #92400e;
+}
+
+.status-pill.red {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.customer-actions,
+.payment-box,
+.edit-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.payment-box input,
+.edit-box input,
+.edit-box textarea {
+  min-width: 180px;
+  flex: 1;
+}
+
+.empty-state {
+  color: var(--text-secondary);
+  padding: 16px 0;
+}
+
+@keyframes pulse-alert {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+@media (max-width: 900px) {
+  .customer-panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-list-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customer-list-header input {
+    max-width: none;
+  }
+
+  .reminder-panels {
+    grid-template-columns: 1fr;
+  }
+}

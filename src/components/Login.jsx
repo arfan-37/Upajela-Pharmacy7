@@ -30,7 +30,7 @@ export default function Login({ onLoginSuccess }) {
       <div className={`glass-card login-card ${isShaking ? 'shake-anim' : ''}`}>
         <div className="login-brand">
           <span className="login-logo-cross">✚</span>
-          <h2>Welcome to Shabab er Dokan</h2>
+          <h2>Welcome to Upajela Pharmacy</h2>
           <p className="login-subtitle">Pharmacy Shop Management System</p>
         </div>
 

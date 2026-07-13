@@ -6,6 +6,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', icon: '📊', adminOnly: false },
     { id: 'pos', name: 'POS Billing', icon: '🛒', adminOnly: false },
+    { id: 'customers', name: 'Customers', icon: '👤', adminOnly: false },
     { id: 'inventory', name: 'Inventory', icon: '📦', adminOnly: false },
     { id: 'reports', name: 'Reports & Logs', icon: '📈', adminOnly: true }
   ];
@@ -15,7 +16,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
       <div className="sidebar-header">
         <div className="avatar-circle">💊</div>
         <div className="store-info">
-          <h3>Shabab er Dokan</h3>
+          <h3>Upajela Pharmacy</h3>
           <span className="location">Dhaka, Bangladesh</span>
         </div>
       </div>

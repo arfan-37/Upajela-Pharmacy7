@@ -14,7 +14,7 @@ export default function Reports({ transactions, currentRole }) {
         <div className="glass-card access-denied-card">
           <span className="denied-icon">🔒</span>
           <h2>Access Denied</h2>
-          <p>You do not have administrative permissions to view sales logs and financial reporting. Please log in as Shabab (Admin) to view this module.</p>
+          <p>You do not have administrative permissions to view sales logs and financial reporting. Please log in as Upajela (Admin) to view this module.</p>
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ export default function Reports({ transactions, currentRole }) {
               onChange={(e) => setSalespersonFilter(e.target.value)}
             >
               <option value="All">All Cashiers</option>
-              <option value="Admin">🛡️ Shabab (Admin)</option>
+              <option value="Admin">🛡️ Upajela (Admin)</option>
               <option value="Assistant">🧑‍⚕️ Assistant (Staff)</option>
             </select>
           </div>

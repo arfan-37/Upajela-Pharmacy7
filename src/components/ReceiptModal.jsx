@@ -20,8 +20,8 @@ export default function ReceiptModal({ transaction, onClose }) {
         {/* Printable Receipt Area */}
         <div className="receipt-paper print-area" id="receipt-print-block">
           <div className="receipt-header">
-            <h2 className="receipt-shop-title">SHABAB ER DOKAN</h2>
-            <p className="receipt-shop-info">Green Pharmacy &amp; Wellness</p>
+            <h2 className="receipt-shop-title">UPAJELA PHARMACY</h2>
+            <p className="receipt-shop-info">Upajela Pharmacy</p>
             <p className="receipt-shop-address">House 42, Road 11, Banani, Dhaka</p>
             <p className="receipt-shop-phone">Phone: +880 1711-223344</p>
           </div>
@@ -93,7 +93,7 @@ export default function ReceiptModal({ transaction, onClose }) {
           <div className="receipt-divider" />
 
           <div className="receipt-footer">
-            <p>Thank you for choosing Shabab er Dokan!</p>
+            <p>Thank you for choosing Upajela Pharmacy!</p>
             <p className="wishes">*** Get Well Soon ***</p>
             <p className="credits">Powered by Antigravity OS</p>
           </div>

@@ -388,6 +388,31 @@
   border-radius: var(--radius-md);
 }
 
+.customer-pos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.customer-pos-form input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-primary);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.checkbox-row input {
+  margin: 0;
+}
+
 /* Animation */
 .animate-fade {
   animation: fadeIn 0.2s ease forwards;

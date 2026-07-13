@@ -45,8 +45,8 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
   return (
     <div className="page-container fade-in">
       <div className="dashboard-welcome">
-        <h2>Welcome back, {currentRole === 'Admin' ? 'Shabab' : 'Assistant'}!</h2>
-        <p className="welcome-text">Here is what's happening at Shabab er Dokan today.</p>
+        <h2>Welcome back, {currentRole === 'Admin' ? 'Upajela' : 'Assistant'}!</h2>
+        <p className="welcome-text">Here is what's happening at Upajela Pharmacy today.</p>
       </div>
 
       {urgentExpiryCount > 0 && (

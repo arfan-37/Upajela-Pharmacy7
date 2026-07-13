@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReceiptModal from './ReceiptModal';
 import './POS.css';
 
-export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess, currentRole }) {
+export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess, onCreditSale, onAddCustomer, customers, currentRole }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
@@ -10,6 +10,14 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   const [cashReceived, setCashReceived] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [creditMode, setCreditMode] = useState(false);
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    phone: '',
+    address: ''
+  });
+  const [customerMode, setCustomerMode] = useState('existing');
 
   // Search filter
   useEffect(() => {
@@ -45,15 +53,21 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   };
 
   const updateCartQty = (id, amount, stock) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
+    setCart(prev => {
+      return prev.reduce((acc, item) => {
+        if (item.id !== id) return acc.concat(item);
         const newQty = item.quantity + amount;
-        if (newQty <= 0) return item; // trigger delete manually instead
-        if (newQty > stock) return item; // exceed stock
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }));
+        if (newQty <= 0) {
+          // remove item when quantity goes to zero or below
+          return acc;
+        }
+        if (newQty > stock) {
+          // do not exceed available stock
+          return acc.concat(item);
+        }
+        return acc.concat({ ...item, quantity: newQty });
+      }, []);
+    });
   };
 
   const removeFromCart = (id) => {
@@ -64,18 +78,52 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const calculatedTax = (subtotal - discount) > 0 ? (subtotal - discount) * 0.05 : 0; // 5% VAT
   const total = Math.max(0, subtotal - discount + calculatedTax);
-  const changeGiven = cashReceived ? parseFloat(cashReceived) - total : 0;
+  const enteredPayment = Number(cashReceived || 0);
+  const paidAmount = cashReceived === '' ? (creditMode ? 0 : total) : enteredPayment;
+  const cashAmount = Math.min(Math.max(0, paidAmount), total);
+  const remainingDue = Math.max(0, total - cashAmount);
+  const changeGiven = cashAmount > total ? cashAmount - total : 0;
+  const customerReady = remainingDue > 0
+    ? (customerMode === 'new'
+        ? Boolean(customerForm.name.trim() && customerForm.phone.trim() && customerForm.address.trim())
+        : Boolean(selectedCustomerId))
+    : true;
+  const canCompleteSale = cart.length > 0 && (!remainingDue || customerReady);
 
   // Checkout submission
   const handleCheckout = (e) => {
     e.preventDefault();
     if (cart.length === 0) return;
-    if (!cashReceived || parseFloat(cashReceived) < total) return;
+    if (remainingDue > 0 && !customerReady) return;
+
+    let customerInfo = null;
+    let customerId = selectedCustomerId;
+
+    if (customerMode === 'new' && customerForm.name.trim() && customerForm.phone.trim() && customerForm.address.trim()) {
+      const newCustomer = {
+        id: Date.now().toString(),
+        name: customerForm.name.trim(),
+        phone: customerForm.phone.trim(),
+        address: customerForm.address.trim(),
+        totalPurchaseAmount: 0,
+        cashPaid: 0,
+        dueAmount: 0,
+        totalDue: 0,
+        dueEntries: []
+      };
+      customerInfo = newCustomer;
+      customerId = newCustomer.id;
+      onAddCustomer?.(newCustomer);
+    } else if (customerMode === 'existing' && selectedCustomerId) {
+      customerInfo = customers.find(customer => customer.id === selectedCustomerId) || null;
+    }
+
+    const paymentType = remainingDue === 0 ? 'cash' : cashAmount === 0 ? 'due' : 'partial';
 
     const transaction = {
       id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
       timestamp: new Date().toISOString(),
-      salesperson: currentRole === 'Admin' ? 'Shabab (Admin)' : 'Assistant',
+      salesperson: currentRole === 'Admin' ? 'Upajela (Admin)' : 'Assistant',
       items: cart.map(item => ({
         id: item.id,
         name: item.name,
@@ -87,9 +135,22 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       discount,
       tax: calculatedTax,
       total,
-      cashReceived: parseFloat(cashReceived),
-      changeGiven
+      cashReceived: cashAmount,
+      changeGiven,
+      customer: customerInfo,
+      paymentType
     };
+
+    if (customerId && total > 0) {
+      onCreditSale(customerId, {
+        totalAmount: total,
+        cashAmount,
+        dueAmount: remainingDue,
+        paymentType,
+        purchaseDate: new Date().toISOString(),
+        invoiceNumber: `TX-${Math.floor(1000 + Math.random() * 9000)}`
+      });
+    }
 
     // Update parent state (stock reduction & transaction logs)
     updateMedicinesStock(cart);
@@ -106,6 +167,10 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
     setDiscount(0);
     setCashReceived('');
     setSearchQuery('');
+    setSelectedCustomerId('');
+    setCreditMode(false);
+    setCustomerMode('existing');
+    setCustomerForm({ name: '', phone: '', address: '' });
     setShowReceipt(false);
     setCurrentTransaction(null);
   };
@@ -128,6 +193,16 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
               className="form-control pos-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (searchResults.length > 0) {
+                    addToCart(searchResults[0]);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }
+                }
+              }}
             />
           </div>
 
@@ -257,9 +332,15 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                 max={subtotal}
                 step="any"
                 className="form-control discount-input"
-                value={discount || ''}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                disabled={cart.length === 0}
+                value={discount === 0 ? '' : discount}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '') return setDiscount(0);
+                  const n = parseFloat(v);
+                  if (Number.isNaN(n)) return;
+                  // clamp between 0 and subtotal
+                  setDiscount(Math.max(0, Math.min(subtotal, n)));
+                }}
               />
             </div>
 
@@ -274,24 +355,96 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
             </div>
 
             <div className="summary-row form-row cash-received-row">
-              <span>Cash Received (৳)</span>
+              <span>{remainingDue > 0 ? 'Amount Paid (৳)' : 'Cash Received (৳)'}</span>
               <input
                 type="number"
-                min={total}
-                step="any"
-                required
+                min={0}
+                step="0.01"
+                inputMode="decimal"
                 placeholder="0.00"
                 className="form-control cash-received-input"
                 value={cashReceived}
-                onChange={(e) => setCashReceived(e.target.value)}
-                disabled={cart.length === 0}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // allow empty string while typing
+                  if (v === '') return setCashReceived('');
+                  const n = parseFloat(v);
+                  if (Number.isNaN(n)) return;
+                  setCashReceived(String(Math.max(0, n)));
+                }}
               />
             </div>
 
-            {cashReceived && parseFloat(cashReceived) >= total && (
+            {remainingDue > 0 && (
+              <div className="summary-row" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                <span>Any remaining amount will be saved as due for the customer.</span>
+              </div>
+            )}
+
+            <div className="summary-row form-row">
+              <span>Payment Mode</span>
+              <label className="checkbox-row">
+                <input type="checkbox" checked={creditMode} onChange={(e) => setCreditMode(e.target.checked)} />
+                <span>Sell on due</span>
+              </label>
+            </div>
+
+            <div className="summary-row form-row">
+              <span>Customer</span>
+              <select
+                className="form-control"
+                value={customerMode}
+                onChange={(e) => setCustomerMode(e.target.value)}
+                disabled={cart.length === 0}
+              >
+                <option value="existing">Existing customer</option>
+                <option value="new">New customer</option>
+              </select>
+            </div>
+
+            {customerMode === 'existing' && (
+              <div className="summary-row form-row">
+                <span>Select Customer</span>
+                <select
+                  className="form-control"
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                >
+                  <option value="">Select customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>{customer.name} • {customer.phone}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {customerMode === 'new' && (
+              <div className="customer-pos-form">
+                <input
+                  className="form-control"
+                  placeholder="Customer name"
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                />
+                <input
+                  className="form-control"
+                  placeholder="Phone number"
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                />
+                <input
+                  className="form-control"
+                  placeholder="Address"
+                  value={customerForm.address}
+                  onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
+                />
+              </div>
+            )}
+
+            {(cashReceived !== '' || remainingDue === 0) && (
               <div className="summary-row change-row animate-fade">
-                <span>Change Given</span>
-                <span className="change-val">৳ {changeGiven.toFixed(2)}</span>
+                <span>{remainingDue > 0 ? 'Amount Paid' : 'Change Given'}</span>
+                <span className="change-val">৳ {remainingDue > 0 ? paidAmount.toFixed(2) : changeGiven.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -299,7 +452,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
           <button
             type="submit"
             className="btn btn-primary btn-checkout"
-            disabled={cart.length === 0 || !cashReceived || parseFloat(cashReceived) < total}
+            disabled={!canCompleteSale}
           >
             Complete Sale &amp; Print Invoice 🖨️
           </button>

@@ -7,7 +7,7 @@ export default function Header({ currentRole, onLogout }) {
       <div className="header-logo">
         <span className="medical-cross">✚</span>
         <div className="header-brand">
-          <h1>Shabab er Dokan</h1>
+          <h1>Upajela Pharmacy</h1>
           <span className="subtitle">Pharmacy Management System</span>
         </div>
       </div>
@@ -17,7 +17,7 @@ export default function Header({ currentRole, onLogout }) {
           <span className="role-label">Active Session:</span>
           <div className="role-badge-wrapper">
             <span className={`role-badge ${currentRole.toLowerCase()}`}>
-              {currentRole === 'Admin' ? '🛡️ Admin (Shabab)' : '🧑‍⚕️ Staff (Assistant)'}
+              {currentRole === 'Admin' ? '🛡️ Admin (Upajela)' : '🧑‍⚕️ Staff (Assistant)'}
             </span>
             <button 
               className="btn btn-secondary btn-sm logout-btn" 
