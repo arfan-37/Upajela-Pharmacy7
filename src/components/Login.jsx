@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-export default function Login({ onLoginSuccess }) {
+export default function Login({ onLoginSuccess, t }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isShaking, setIsShaking] = useState(false);
@@ -18,7 +18,7 @@ export default function Login({ onLoginSuccess }) {
     } else if (trimmedPassword === 'staff') {
       onLoginSuccess('Staff');
     } else {
-      setError('Invalid password. Try using "admin" or "staff".');
+      setError(t.login.error);
       setIsShaking(true);
       // Reset shake after animation completes
       setTimeout(() => setIsShaking(false), 500);
@@ -30,18 +30,18 @@ export default function Login({ onLoginSuccess }) {
       <div className={`glass-card login-card ${isShaking ? 'shake-anim' : ''}`}>
         <div className="login-brand">
           <span className="login-logo-cross">✚</span>
-          <h2>Welcome to Upajela Pharmacy</h2>
-          <p className="login-subtitle">Pharmacy Shop Management System</p>
+          <h2>{t.login.title}</h2>
+          <p className="login-subtitle">{t.login.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label className="form-label" htmlFor="loginPass">Enter Password</label>
+            <label className="form-label" htmlFor="loginPass">{t.login.passwordLabel}</label>
             <input
               type="password"
               id="loginPass"
               required
-              placeholder="••••••••"
+              placeholder={t.login.placeholder}
               className={`form-control ${error ? 'input-error' : ''}`}
               value={password}
               onChange={(e) => {
@@ -54,20 +54,20 @@ export default function Login({ onLoginSuccess }) {
           {error && <span className="login-error-text">{error}</span>}
 
           <button type="submit" className="btn btn-primary login-submit-btn">
-            Login &rarr;
+            {t.login.login}
           </button>
         </form>
 
         <div className="demo-credentials-box">
-          <h4>💡 Demo Passwords for Testing:</h4>
+          <h4>{t.login.demoTitle}</h4>
           <ul>
-            <li>Enter <code>admin</code> for Admin Panel (Full Access)</li>
-            <li>Enter <code>staff</code> for Staff Panel (POS &amp; Search Only)</li>
+            <li>{t.login.demoAdmin}</li>
+            <li>{t.login.demoStaff}</li>
           </ul>
         </div>
 
         <div className="login-footer">
-          <span>Secure Offline Session</span>
+          <span>{t.login.footer}</span>
         </div>
       </div>
     </div>

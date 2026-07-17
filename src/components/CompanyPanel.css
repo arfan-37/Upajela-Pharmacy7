@@ -1,0 +1,190 @@
+/* Company Panel — reuses the shared Inventory table/toolbar/modal styles.
+   Only Company-specific tweaks are defined here. */
+
+.company-balance-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.company-balance-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--accent);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.strong {
+  font-weight: 700;
+}
+
+/* Inline add-purchase / edit forms inside expanded rows */
+.history-row > td {
+  background-color: var(--bg-card);
+  padding: 0 !important;
+}
+
+.inline-form-box {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Product rows (modal + inline) */
+.product-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.product-qty {
+  max-width: 110px;
+  flex: 0 0 110px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.company-actions,
+.payment-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.company-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.company-feedback {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Action icons in the company table */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-buttons button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.action-buttons .edit-btn:hover {
+  background-color: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.action-buttons .delete-btn:hover {
+  background-color: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* History list */
+.history-box {
+  padding: 16px 20px;
+}
+
+.history-box h5 {
+  margin: 0 0 10px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.history-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.history-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.history-badge.purchase {
+  background: var(--info-light);
+  color: var(--info);
+}
+
+.history-badge.payment {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.history-date {
+  font-weight: 600;
+  min-width: 150px;
+}
+
+.history-detail {
+  flex: 1;
+  min-width: 200px;
+}
+
+.history-edit-btn {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  .action-buttons {
+    gap: 6px;
+  }
+
+  .action-buttons button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

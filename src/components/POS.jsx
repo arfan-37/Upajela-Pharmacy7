@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReceiptModal from './ReceiptModal';
 import './POS.css';
 
-export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess, onCreditSale, onAddCustomer, customers, currentRole }) {
+export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess, onCreditSale, onAddCustomer, customers, currentRole, t }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
@@ -12,6 +12,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   const [currentTransaction, setCurrentTransaction] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [creditMode, setCreditMode] = useState(false);
+  const [purchaseDateMode, setPurchaseDateMode] = useState('auto');
+  const [manualPurchaseDate, setManualPurchaseDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [customerForm, setCustomerForm] = useState({
     name: '',
     phone: '',
@@ -119,11 +121,14 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
     }
 
     const paymentType = remainingDue === 0 ? 'cash' : cashAmount === 0 ? 'due' : 'partial';
+    const selectedPurchaseDate = purchaseDateMode === 'manual' && manualPurchaseDate
+      ? new Date(manualPurchaseDate).toISOString()
+      : new Date().toISOString();
 
     const transaction = {
       id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
-      timestamp: new Date().toISOString(),
-      salesperson: currentRole === 'Admin' ? 'Upajela (Admin)' : 'Assistant',
+      timestamp: selectedPurchaseDate,
+      salesperson: currentRole === 'Admin' ? 'Upazila (Admin)' : 'Assistant',
       items: cart.map(item => ({
         id: item.id,
         name: item.name,
@@ -143,12 +148,19 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
 
     if (customerId && total > 0) {
       onCreditSale(customerId, {
+        products: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          cost: item.cost
+        })),
         totalAmount: total,
         cashAmount,
         dueAmount: remainingDue,
         paymentType,
-        purchaseDate: new Date().toISOString(),
-        invoiceNumber: `TX-${Math.floor(1000 + Math.random() * 9000)}`
+        purchaseDate: selectedPurchaseDate,
+        invoiceNumber: transaction.id
       });
     }
 
@@ -182,14 +194,14 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       <div className="pos-search-panel">
         <div className="glass-card catalog-card">
           <div className="catalog-header">
-            <h3>Medicine Catalog</h3>
-            <p className="catalog-subtitle">Search by medicine name, chemical compound, or type.</p>
+            <h3>{t.pos.catalogTitle}</h3>
+            <p className="catalog-subtitle">{t.pos.catalogSubtitle}</p>
           </div>
           <div className="search-bar-wrapper">
             <span className="search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Search e.g. Paracetamol, Napa, Syrup, Sergel..."
+              placeholder={t.pos.searchPlaceholder}
               className="form-control pos-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -226,7 +238,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                     <div className="med-price-stock">
                       <span className="med-price">৳ {m.price.toFixed(2)}</span>
                       <span className={`med-stock ${remainingStock <= 0 ? 'out-of-stock' : isLowStock ? 'text-warning' : 'in-stock'}`}>
-                        {remainingStock <= 0 ? 'Out of stock' : `${remainingStock} available`}
+                        {remainingStock <= 0 ? t.pos.outOfStock : t.pos.available.replace('{count}', remainingStock)}
                       </span>
                     </div>
                     <button
@@ -234,7 +246,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                       onClick={() => addToCart(m)}
                       disabled={remainingStock <= 0}
                     >
-                      + Add
+                      {t.pos.add}
                     </button>
                   </div>
                 </div>
@@ -243,15 +255,15 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
 
             {searchQuery.trim() && searchResults.length === 0 && (
               <div className="empty-results-msg">
-                <span>❌ No matching medicines found. Try another term.</span>
+                <span>{t.pos.noResults}</span>
               </div>
             )}
 
             {!searchQuery.trim() && (
               <div className="search-prompt-box">
                 <span className="prompt-icon">💊</span>
-                <h4>Ready to Search</h4>
-                <p>Type a brand name, generic formula, or drug type to begin filling a prescription.</p>
+                <h4>{t.pos.readyTitle}</h4>
+                <p>{t.pos.readyDesc}</p>
               </div>
             )}
           </div>
@@ -262,8 +274,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       <div className="pos-checkout-panel">
         <form className="glass-card cart-card" onSubmit={handleCheckout}>
           <div className="cart-header">
-            <h3>Active Prescription Cart</h3>
-            <span className="cart-count-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)} items</span>
+            <h3>{t.pos.cartTitle}</h3>
+            <span className="cart-count-badge">{cart.reduce((sum, item) => sum + item.quantity, 0)} {t.pos.itemsLabel}</span>
           </div>
 
           <div className="cart-items-container">
@@ -309,8 +321,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
             {cart.length === 0 && (
               <div className="empty-cart-msg">
                 <span className="basket-icon">🧺</span>
-                <h4>Cart is Empty</h4>
-                <p>Select medicines from the search list to add them to this invoice.</p>
+                <h4>{t.pos.emptyCartTitle}</h4>
+                <p>{t.pos.emptyCartDesc}</p>
               </div>
             )}
           </div>
@@ -320,12 +332,12 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
           {/* Pricing Calculations */}
           <div className="billing-summary">
             <div className="summary-row">
-              <span>Subtotal</span>
+              <span>{t.pos.subtotal}</span>
               <span>৳ {subtotal.toFixed(2)}</span>
             </div>
 
             <div className="summary-row form-row">
-              <span>Discount (৳)</span>
+              <span>{t.pos.discount}</span>
               <input
                 type="number"
                 min="0"
@@ -345,17 +357,17 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
             </div>
 
             <div className="summary-row">
-              <span>VAT / Tax (5%)</span>
+              <span>{t.pos.tax}</span>
               <span>৳ {calculatedTax.toFixed(2)}</span>
             </div>
 
             <div className="summary-row grand-total-row">
-              <span>Grand Total</span>
+              <span>{t.pos.total}</span>
               <span className="grand-total-val">৳ {total.toFixed(2)}</span>
             </div>
 
             <div className="summary-row form-row cash-received-row">
-              <span>{remainingDue > 0 ? 'Amount Paid (৳)' : 'Cash Received (৳)'}</span>
+              <span>{remainingDue > 0 ? t.pos.amountPaid : t.pos.cashReceived}</span>
               <input
                 type="number"
                 min={0}
@@ -377,40 +389,84 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
 
             {remainingDue > 0 && (
               <div className="summary-row" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                <span>Any remaining amount will be saved as due for the customer.</span>
+                <span>{t.pos.dueHint}</span>
               </div>
             )}
 
             <div className="summary-row form-row">
-              <span>Payment Mode</span>
+              <span>{t.pos.paymentMode}</span>
               <label className="checkbox-row">
                 <input type="checkbox" checked={creditMode} onChange={(e) => setCreditMode(e.target.checked)} />
-                <span>Sell on due</span>
+                <span>{t.pos.sellOnDue}</span>
               </label>
             </div>
 
             <div className="summary-row form-row">
-              <span>Customer</span>
+              <span>{t.pos.billingDateLabel}</span>
+              <div className="billing-date-controls">
+                <label className="radio-row">
+                  <input
+                    type="radio"
+                    name="purchaseDateMode"
+                    value="auto"
+                    checked={purchaseDateMode === 'auto'}
+                    onChange={() => setPurchaseDateMode('auto')}
+                  />
+                  <span>{t.pos.autoDateLabel}</span>
+                </label>
+                <label className="radio-row">
+                  <input
+                    type="radio"
+                    name="purchaseDateMode"
+                    value="manual"
+                    checked={purchaseDateMode === 'manual'}
+                    onChange={() => setPurchaseDateMode('manual')}
+                  />
+                  <span>{t.pos.manualDateLabel}</span>
+                </label>
+              </div>
+            </div>
+
+            {purchaseDateMode === 'manual' ? (
+              <div className="summary-row form-row">
+                <span>{t.pos.purchaseDate}</span>
+                <input
+                  type="datetime-local"
+                  className="form-control billing-date-input"
+                  value={manualPurchaseDate}
+                  onChange={(e) => setManualPurchaseDate(e.target.value)}
+                  max={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+            ) : (
+              <div className="summary-row form-row">
+                <span>{t.pos.purchaseDate}</span>
+                <span className="billing-date-note">{t.pos.dateNow}</span>
+              </div>
+            )}
+
+            <div className="summary-row form-row">
+              <span>{t.pos.customer}</span>
               <select
                 className="form-control"
                 value={customerMode}
                 onChange={(e) => setCustomerMode(e.target.value)}
                 disabled={cart.length === 0}
               >
-                <option value="existing">Existing customer</option>
-                <option value="new">New customer</option>
+                <option value="existing">{t.pos.existingCustomer}</option>
+                <option value="new">{t.pos.newCustomer}</option>
               </select>
             </div>
 
             {customerMode === 'existing' && (
               <div className="summary-row form-row">
-                <span>Select Customer</span>
+                <span>{t.pos.selectCustomer}</span>
                 <select
                   className="form-control"
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
                 >
-                  <option value="">Select customer</option>
+                  <option value="">{t.pos.selectPlaceholder}</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>{customer.name} • {customer.phone}</option>
                   ))}
@@ -463,7 +519,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       {showReceipt && currentTransaction && (
         <ReceiptModal 
           transaction={currentTransaction} 
-          onClose={handleCloseReceipt} 
+          onClose={handleCloseReceipt}
+          t={t}
         />
       )}
     </div>

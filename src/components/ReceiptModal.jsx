@@ -1,8 +1,29 @@
 import React from 'react';
 import './ReceiptModal.css';
 
-export default function ReceiptModal({ transaction, onClose }) {
+export default function ReceiptModal({ transaction, onClose, t }) {
   if (!transaction) return null;
+
+  const text = t?.receipt || {
+    invoiceId: 'Invoice ID:',
+    date: 'Date:',
+    cashier: 'Cashier:',
+    medicine: 'Medicine',
+    qty: 'Qty',
+    price: 'Price',
+    total: 'Total',
+    subtotal: 'Subtotal:',
+    discount: 'Discount:',
+    tax: 'VAT / Tax (5%):',
+    grandTotal: 'GRAND TOTAL:',
+    cashReceived: 'Cash Received:',
+    changeGiven: 'Change Given:',
+    thankYou: 'Thank you for choosing Upazila Pharmacy!',
+    wishes: '*** Get Well Soon ***',
+    credits: 'Powered by Antigravity OS',
+    close: '❌ Close & New Sale',
+    print: '🖨️ Print Receipt'
+  };
 
   const handlePrint = () => {
     window.print();
@@ -20,18 +41,18 @@ export default function ReceiptModal({ transaction, onClose }) {
         {/* Printable Receipt Area */}
         <div className="receipt-paper print-area" id="receipt-print-block">
           <div className="receipt-header">
-            <h2 className="receipt-shop-title">UPAJELA PHARMACY</h2>
-            <p className="receipt-shop-info">Upajela Pharmacy</p>
-            <p className="receipt-shop-address">House 42, Road 11, Banani, Dhaka</p>
+            <h2 className="receipt-shop-title">UPAZILA PHARMACY</h2>
+            <p className="receipt-shop-info">Upazila Pharmacy</p>
+            <p className="receipt-shop-address">Sherpur, Bogra</p>
             <p className="receipt-shop-phone">Phone: +880 1711-223344</p>
           </div>
 
           <div className="receipt-divider" />
 
           <div className="receipt-meta">
-            <div><strong>Invoice ID:</strong> {transaction.id}</div>
-            <div><strong>Date:</strong> {formatDate(transaction.timestamp)}</div>
-            <div><strong>Cashier:</strong> {transaction.salesperson}</div>
+            <div><strong>{text.invoiceId}</strong> {transaction.id}</div>
+            <div><strong>{text.date}</strong> {formatDate(transaction.timestamp)}</div>
+            <div><strong>{text.cashier}</strong> {transaction.salesperson}</div>
           </div>
 
           <div className="receipt-divider" />
@@ -39,10 +60,10 @@ export default function ReceiptModal({ transaction, onClose }) {
           <table className="receipt-items-table">
             <thead>
               <tr>
-                <th className="text-left">Medicine</th>
-                <th className="text-center">Qty</th>
-                <th className="text-right">Price</th>
-                <th className="text-right">Total</th>
+                <th className="text-left">{text.medicine}</th>
+                <th className="text-center">{text.qty}</th>
+                <th className="text-right">{text.price}</th>
+                <th className="text-right">{text.total}</th>
               </tr>
             </thead>
             <tbody>
@@ -61,31 +82,31 @@ export default function ReceiptModal({ transaction, onClose }) {
 
           <div className="receipt-totals">
             <div className="totals-row">
-              <span>Subtotal:</span>
+              <span>{text.subtotal}</span>
               <span>৳{transaction.subtotal.toFixed(2)}</span>
             </div>
             {transaction.discount > 0 && (
               <div className="totals-row">
-                <span>Discount:</span>
+                <span>{text.discount}</span>
                 <span>-৳{transaction.discount.toFixed(2)}</span>
               </div>
             )}
             <div className="totals-row">
-              <span>VAT / Tax (5%):</span>
+              <span>{text.tax}</span>
               <span>৳{transaction.tax.toFixed(2)}</span>
             </div>
             <div className="receipt-divider dashed" />
             <div className="totals-row grand-total">
-              <span>GRAND TOTAL:</span>
+              <span>{text.grandTotal}</span>
               <span>৳{transaction.total.toFixed(2)}</span>
             </div>
             <div className="receipt-divider dashed" />
             <div className="totals-row">
-              <span>Cash Received:</span>
+              <span>{text.cashReceived}</span>
               <span>৳{transaction.cashReceived.toFixed(2)}</span>
             </div>
             <div className="totals-row">
-              <span>Change Given:</span>
+              <span>{text.changeGiven}</span>
               <span>৳{transaction.changeGiven.toFixed(2)}</span>
             </div>
           </div>
@@ -93,19 +114,19 @@ export default function ReceiptModal({ transaction, onClose }) {
           <div className="receipt-divider" />
 
           <div className="receipt-footer">
-            <p>Thank you for choosing Upajela Pharmacy!</p>
-            <p className="wishes">*** Get Well Soon ***</p>
-            <p className="credits">Powered by Antigravity OS</p>
+            <p>{text.thankYou}</p>
+            <p className="wishes">{text.wishes}</p>
+            <p className="credits">{text.credits}</p>
           </div>
         </div>
 
         {/* Action Buttons (Hidden during window.print()) */}
         <div className="receipt-actions no-print">
           <button className="btn btn-secondary" onClick={onClose}>
-            ❌ Close &amp; New Sale
+            {text.close}
           </button>
           <button className="btn btn-primary" onClick={handlePrint}>
-            🖨️ Print Receipt
+            {text.print}
           </button>
         </div>
 

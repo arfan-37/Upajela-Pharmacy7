@@ -1,9 +1,10 @@
 import React from 'react';
 import './Dashboard.css';
+import { addDaysToDateOnly, formatDateOnly } from '../utils/dateUtils';
 
-export default function Dashboard({ medicines, transactions, currentRole, setActiveTab, setInventoryFilter }) {
-  const TODAY = '2026-07-09';
-  const THREE_MONTHS_LATER = '2026-10-09';
+export default function Dashboard({ medicines, transactions, currentRole, setActiveTab, setInventoryFilter, t }) {
+  const TODAY = formatDateOnly();
+  const THREE_MONTHS_LATER = addDaysToDateOnly(TODAY, 90);
 
   // Calculations
   const totalItems = medicines.length;
@@ -45,8 +46,8 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
   return (
     <div className="page-container fade-in">
       <div className="dashboard-welcome">
-        <h2>Welcome back, {currentRole === 'Admin' ? 'Upajela' : 'Assistant'}!</h2>
-        <p className="welcome-text">Here is what's happening at Upajela Pharmacy today.</p>
+        <h2>{t.dashboard.welcomeAdmin}</h2>
+        <p className="welcome-text">{t.dashboard.intro}</p>
       </div>
 
       {urgentExpiryCount > 0 && (
@@ -61,10 +62,10 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
           <div className="banner-content">
             <span className="banner-icon">🚨</span>
             <span className="banner-text">
-              <strong>Expiry Alert:</strong> You have {urgentExpiryCount} medicine batches that are expired or expiring within 3 months! Click here to review them.
+              <strong>{t.dashboard.expiryAlert}</strong> {t.dashboard.expiryMessage.replace('{count}', urgentExpiryCount)}
             </span>
           </div>
-          <span className="banner-action">View Products &rarr;</span>
+          <span className="banner-action">{t.dashboard.viewProducts}</span>
         </div>
       )}
 
@@ -75,7 +76,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
             <div className="glass-card kpi-card">
               <div className="kpi-icon revenue-icon">৳</div>
               <div className="kpi-data">
-                <span className="kpi-title">Total Revenue</span>
+                <span className="kpi-title">{t.dashboard.revenue}</span>
                 <h3 className="kpi-value">৳ {totalRevenue.toFixed(2)}</h3>
                 <span className="kpi-subtext">Cumulative Sales</span>
               </div>
@@ -84,7 +85,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
             <div className="glass-card kpi-card">
               <div className="kpi-icon profit-icon">📈</div>
               <div className="kpi-data">
-                <span className="kpi-title">Net Profit</span>
+                <span className="kpi-title">{t.dashboard.profit}</span>
                 <h3 className="kpi-value">৳ {totalProfit.toFixed(2)}</h3>
                 <span className="kpi-subtext">Margin: {((totalProfit / (totalRevenue || 1)) * 100).toFixed(1)}%</span>
               </div>
@@ -95,10 +96,10 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         <div className="glass-card kpi-card">
           <div className="kpi-icon items-icon">📦</div>
           <div className="kpi-data">
-            <span className="kpi-title">Unique Medicines</span>
+            <span className="kpi-title">{t.dashboard.items}</span>
             <h3 className="kpi-value">{totalItems}</h3>
             <span className="kpi-subtext" style={{cursor: 'pointer'}} onClick={() => setActiveTab('inventory')}>
-              Browse Inventory &rarr;
+              {t.dashboard.browseInventory}
             </span>
           </div>
         </div>
@@ -113,9 +114,9 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         >
           <div className="kpi-icon warning-icon">⚠️</div>
           <div className="kpi-data">
-            <span className="kpi-title">Low Stock Items</span>
+            <span className="kpi-title">{t.dashboard.lowStock}</span>
             <h3 className="kpi-value text-warning">{lowStockCount}</h3>
-            <span className="kpi-subtext">Below threshold (15 units)</span>
+            <span className="kpi-subtext">{t.dashboard.lowStockSubtext}</span>
           </div>
         </div>
 
@@ -129,7 +130,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         >
           <div className="kpi-icon danger-icon">⏰</div>
           <div className="kpi-data">
-            <span className="kpi-title">Expiry Warnings</span>
+            <span className="kpi-title">{t.dashboard.expiryWarnings}</span>
             <h3 className="kpi-value text-danger">{urgentExpiryCount}</h3>
             <span className="kpi-subtext">{expiredMedicines.length} expired | {expiringSoonMedicines.length} expiring soon</span>
           </div>
@@ -141,8 +142,8 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         <div className="glass-card dashboard-chart-section">
           {currentRole === 'Admin' ? (
             <>
-              <h3>Sales revenue by Category</h3>
-              <p className="section-description">A visual summary of sales partitioned by pharmaceutical category.</p>
+              <h3>{t.dashboard.salesByCategory}</h3>
+              <p className="section-description">{t.dashboard.salesByCategoryDesc}</p>
               
               {categories.length > 0 ? (
                 <div className="chart-wrapper">
@@ -208,16 +209,16 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 </div>
               ) : (
                 <div className="empty-chart">
-                  <span>No transaction data available yet to display charts.</span>
+                  <span>{t.dashboard.noData}</span>
                 </div>
               )}
             </>
           ) : (
             <div className="staff-action-box">
-              <h3>⚡ Quick POS Operations</h3>
-              <p>Ready to check out a customer? Launch the POS Billing station to select medicines, calculate prices, and print receipts.</p>
+              <h3>{t.dashboard.quickPos}</h3>
+              <p>{t.dashboard.quickPosDesc}</p>
               <button className="btn btn-primary" onClick={() => setActiveTab('pos')}>
-                Launch POS Terminal 🛒
+                {t.dashboard.launchPos}
               </button>
             </div>
           )}
@@ -225,8 +226,8 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
 
         {/* Alerts & Warnings Panel */}
         <div className="glass-card dashboard-alerts-section">
-          <h3>🚨 Urgent Alerts</h3>
-          <p className="section-description">Medicines requiring immediate stock replenishment or shelf removals.</p>
+          <h3>{t.dashboard.urgentAlerts}</h3>
+          <p className="section-description">{t.dashboard.urgentAlertsDesc}</p>
           
           <div className="alerts-list">
             {expiredMedicines.map(m => (
@@ -234,7 +235,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 <span className="alert-icon">☠️</span>
                 <div className="alert-info">
                   <h4>{m.name} <span className="alert-generic">({m.genericName})</span></h4>
-                  <p className="alert-desc text-danger">EXPIRED on {m.expiryDate}! Remove from shelves immediately.</p>
+                  <p className="alert-desc text-danger">{t.dashboard.expiredOn.replace('{date}', m.expiryDate)}</p>
                 </div>
                 {currentRole === 'Admin' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('inventory')}>
@@ -249,7 +250,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 <span className="alert-icon">📅</span>
                 <div className="alert-info">
                   <h4>{m.name} <span className="alert-generic">({m.genericName})</span></h4>
-                  <p className="alert-desc text-danger">Expiring soon ({m.expiryDate}). Consider markdown/discounts.</p>
+                  <p className="alert-desc text-danger">{t.dashboard.expiringSoonText.replace('{date}', m.expiryDate)}</p>
                 </div>
                 {currentRole === 'Admin' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('inventory')}>
@@ -264,11 +265,11 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 <span className="alert-icon">⚠️</span>
                 <div className="alert-info">
                   <h4>{m.name} <span className="alert-generic">({m.genericName})</span></h4>
-                  <p className="alert-desc text-warning">Critically low stock: Only {m.stock} units left.</p>
+                  <p className="alert-desc text-warning">{t.dashboard.lowStockText.replace('{count}', m.stock)}</p>
                 </div>
                 {currentRole === 'Admin' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('inventory')}>
-                    Restock
+                    {t.dashboard.restock}
                   </button>
                 )}
               </div>
@@ -277,8 +278,8 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
             {lowStockCount === 0 && urgentExpiryCount === 0 && (
               <div className="all-clear">
                 <span className="clear-icon">✅</span>
-                <h4>All Clear!</h4>
-                <p>No critical stock or expiry issues detected in your inventory.</p>
+                <h4>{t.dashboard.allClear}</h4>
+                <p>{t.dashboard.allClearDesc}</p>
               </div>
             )}
           </div>

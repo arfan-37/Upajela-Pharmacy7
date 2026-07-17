@@ -1,119 +1,47 @@
 import React, { useMemo, useState } from 'react';
 import './CustomerPanel.css';
+import { rebuildCustomerHistoryTimeline } from '../utils/customerHistory';
 
-export default function CustomerPanel({ customers, shopBalance, onAddCustomer, onUpdateCustomer, onDeleteCustomer, onReceivePayment, currentRole }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    initialDue: '0'
-  });
-  const [feedback, setFeedback] = useState('');
-  const [activePaymentId, setActivePaymentId] = useState(null);
+export default function CustomerPanel({ customers, shopBalance, onAddCustomer, onUpdateCustomer, onDeleteCustomer, onReceivePayment, currentRole, t }) {
+  // Search & Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('All'); // 'All' | '15' | '30'
+
+  // Customer Add/Edit Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  const [editingId, setEditingId] = useState(null);
+  const [formName, setFormName] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formAddress, setFormAddress] = useState('');
+  const [formInitialDue, setFormInitialDue] = useState('0');
+
+  // Receive Payment Modal State
+  const [paymentCustomerId, setPaymentCustomerId] = useState(null);
   const [paymentValue, setPaymentValue] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
-  const [editingCustomerId, setEditingCustomerId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', initialDue: '0', purchaseDate: '', paymentDate: '' });
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Expanded history row
+  const [historyId, setHistoryId] = useState(null);
+
+  const formatDateTime = (value) => {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const formatAmount = (value) => `৳ ${Number(value || 0).toFixed(2)}`;
 
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
-      setFeedback('Please fill in all customer fields.');
-      return;
-    }
+  const getTransactionTimestamp = (entry) => entry.createdAt || entry.purchaseDate || entry.paymentDate || '';
 
-    const duplicate = customers.some(customer => customer.phone === formData.phone.trim());
-    if (duplicate) {
-      setFeedback('This phone number is already registered.');
-      return;
-    }
+  const getSaleProductsLabel = (entry) => {
+    const products = Array.isArray(entry.products) ? entry.products : [];
+    if (products.length === 0) return '—';
 
-    const initialDue = Number(formData.initialDue || 0);
-    const newCustomer = {
-      id: Date.now().toString(),
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim(),
-      totalPurchaseAmount: 0,
-      cashPaid: 0,
-      dueAmount: Number.isFinite(initialDue) ? Math.max(0, initialDue) : 0,
-      totalDue: Number.isFinite(initialDue) ? Math.max(0, initialDue) : 0,
-      dueEntries: []
-    };
-
-    onAddCustomer(newCustomer);
-    setFormData({ name: '', phone: '', address: '', initialDue: '0' });
-    setFeedback('Customer saved successfully.');
-  };
-
-  const filteredCustomers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return customers;
-    return customers.filter((customer) => {
-      const haystack = `${customer.name || ''} ${customer.phone || ''}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [customers, searchTerm]);
-
-  const sortedCustomers = useMemo(() => {
-    return [...filteredCustomers].sort((a, b) => {
-      const getPriority = (customer) => {
-        const age = customer.dueEntries?.length ? Math.max(...customer.dueEntries.map(entry => new Date(entry.createdAt).getTime())) : null;
-        const now = Date.now();
-        if (!age) return 0;
-        const daysOld = (now - age) / (1000 * 60 * 60 * 24);
-        if (daysOld > 30) return 2;
-        if (daysOld >= 15) return 1;
-        return 0;
-      };
-      const aPriority = getPriority(a);
-      const bPriority = getPriority(b);
-      if (aPriority !== bPriority) return bPriority - aPriority;
-      return (b.totalDue || 0) - (a.totalDue || 0);
-    });
-  }, [filteredCustomers]);
-
-  const getDueAgeInDays = (customer) => {
-    const latestDueDate = customer.dueEntries?.length
-      ? customer.dueEntries
-          .filter(entry => entry.type === 'credit')
-          .map(entry => new Date(entry.createdAt).getTime())
-          .sort((a, b) => b - a)[0]
-      : null;
-    if (!latestDueDate) return 0;
-    return Math.floor((Date.now() - latestDueDate) / (1000 * 60 * 60 * 24));
-  };
-
-  const getDueStatus = (customer) => {
-    const historyEntries = (customer.paymentHistory || []).filter(entry => entry.type === 'sale' && entry.purchaseDate);
-    const dueDates = [...historyEntries].map(entry => new Date(entry.purchaseDate).getTime()).filter(date => !Number.isNaN(date));
-
-    if (dueDates.length === 0) {
-      const latestDueDate = customer.dueEntries?.length
-        ? customer.dueEntries
-            .filter(entry => entry.type === 'credit')
-            .map(entry => new Date(entry.createdAt).getTime())
-            .sort((a, b) => b - a)[0]
-        : null;
-      if (!latestDueDate) return 'normal';
-      const daysOld = (Date.now() - latestDueDate) / (1000 * 60 * 60 * 24);
-      if (daysOld >= 30) return 'red';
-      if (daysOld >= 15) return 'warning';
-      return 'normal';
-    }
-
-    const latestDueDate = Math.max(...dueDates);
-    const daysOld = (Date.now() - latestDueDate) / (1000 * 60 * 60 * 24);
-    if (daysOld >= 30) return 'red';
-    if (daysOld >= 15) return 'warning';
-    return 'normal';
+    return products
+      .map((product) => `${product.name} x${product.quantity}`)
+      .join(', ');
   };
 
   const getPaymentStatus = (customer) => {
@@ -121,10 +49,37 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
     const cashPaid = Number(customer.cashPaid || 0);
     const dueAmount = Number(customer.dueAmount ?? customer.totalDue ?? 0);
 
-    if (!totalPurchaseAmount) return 'No purchase';
     if (dueAmount <= 0) return 'Paid';
+    if (!totalPurchaseAmount) return 'Full Due';
     if (cashPaid > 0) return 'Partial Due';
     return 'Full Due';
+  };
+
+  // Classify a customer by how long their due has been outstanding:
+  // '30' => 30+ days, '15' => 15-29 days, 'none' => paid / no due.
+  const getDueBucket = (customer) => {
+    const dueAmount = Number(customer.dueAmount ?? customer.totalDue ?? 0);
+    if (dueAmount <= 0) return 'none';
+
+    const saleDates = (customer.paymentHistory || [])
+      .filter((entry) => entry.type === 'sale' && entry.purchaseDate)
+      .map((entry) => new Date(entry.purchaseDate).getTime())
+      .filter((d) => !Number.isNaN(d));
+
+    if (saleDates.length === 0) {
+      const createdAt = customer.createdAt ? new Date(customer.createdAt).getTime() : NaN;
+      if (Number.isNaN(createdAt)) return '15';
+
+      const daysOld = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+      if (daysOld >= 30) return '30';
+      if (daysOld >= 15) return '15';
+      return 'none';
+    }
+    const oldest = Math.min(...saleDates);
+    const daysOld = (Date.now() - oldest) / (1000 * 60 * 60 * 24);
+    if (daysOld >= 30) return '30';
+    if (daysOld >= 15) return '15';
+    return 'none';
   };
 
   const getLatestPurchaseDate = (customer) => {
@@ -140,240 +95,422 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
     return latestDate ? latestDate.toLocaleDateString() : '—';
   };
 
+  const getHistoryEntries = (customer) => {
+    return rebuildCustomerHistoryTimeline(customer.paymentHistory || [])
+      .sort((a, b) => new Date(getTransactionTimestamp(b)).getTime() - new Date(getTransactionTimestamp(a)).getTime());
+  };
+
+  // Filtering Logic
+  const filteredCustomers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return customers.filter((customer) => {
+      const matchesSearch =
+        customer.name?.toLowerCase().includes(query) ||
+        customer.phone?.toLowerCase().includes(query) ||
+        customer.address?.toLowerCase().includes(query);
+
+      const bucket = getDueBucket(customer);
+      let matchesTab = true;
+      if (activeTab === '15') matchesTab = bucket === '15';
+      else if (activeTab === '30') matchesTab = bucket === '30';
+
+      return matchesSearch && matchesTab;
+    });
+  }, [customers, searchTerm, activeTab]);
+
+  const sortedCustomers = useMemo(() => {
+    return [...filteredCustomers].sort((a, b) => {
+      const aDue = Number(a.dueAmount ?? a.totalDue ?? 0);
+      const bDue = Number(b.dueAmount ?? b.totalDue ?? 0);
+      if ((aDue > 0 ? 1 : 0) !== (bDue > 0 ? 1 : 0)) return bDue > 0 ? 1 : -1;
+      return bDue - aDue;
+    });
+  }, [filteredCustomers]);
+
+  const openAddModal = () => {
+    setModalMode('add');
+    setEditingId(null);
+    setFormName('');
+    setFormPhone('');
+    setFormAddress('');
+    setFormInitialDue('0');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (customer) => {
+    setModalMode('edit');
+    setEditingId(customer.id);
+    setFormName(customer.name);
+    setFormPhone(customer.phone);
+    setFormAddress(customer.address);
+    setFormInitialDue(String(customer.dueAmount ?? customer.totalDue ?? 0));
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+  };
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+
+    if (!formName.trim() || !formPhone.trim() || !formAddress.trim()) {
+      return;
+    }
+
+    if (modalMode === 'add') {
+      const duplicate = customers.some(c => c.phone === formPhone.trim());
+      if (duplicate) return;
+
+      const initialDue = Math.max(0, Number(formInitialDue || 0));
+      const newCustomer = {
+        id: `CUST-${Math.floor(100 + Math.random() * 900)}`,
+        name: formName.trim(),
+        phone: formPhone.trim(),
+        address: formAddress.trim(),
+        totalPurchaseAmount: 0,
+        cashPaid: 0,
+        dueAmount: initialDue,
+        totalDue: initialDue,
+        dueEntries: []
+      };
+      onAddCustomer(newCustomer);
+    } else {
+      const duplicate = customers.some(c => c.phone === formPhone.trim() && c.id !== editingId);
+      if (duplicate) return;
+
+      const existingCustomer = customers.find(c => c.id === editingId);
+      const updatedCustomer = {
+        ...existingCustomer,
+        name: formName.trim(),
+        phone: formPhone.trim(),
+        address: formAddress.trim(),
+        dueAmount: Math.max(0, Number(formInitialDue || 0)),
+        totalDue: Math.max(0, Number(formInitialDue || 0))
+      };
+      onUpdateCustomer(updatedCustomer);
+    }
+
+    closeModal();
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this customer?')) {
+      onDeleteCustomer(id);
+    }
+  };
+
   const openPayment = (customer) => {
-    setActivePaymentId(customer.id);
+    setPaymentCustomerId(customer.id);
     setPaymentValue('');
     setPaymentDate(new Date().toISOString().slice(0, 10));
   };
 
-  const submitPayment = (customerId) => {
-    const amount = Number(paymentValue);
-    if (!amount || amount <= 0) return;
-    onReceivePayment(customerId, amount, paymentDate || new Date().toISOString());
-    setActivePaymentId(null);
+  const closePayment = () => {
+    setPaymentCustomerId(null);
     setPaymentValue('');
     setPaymentDate('');
   };
 
-  const startEdit = (customer) => {
-    setEditingCustomerId(customer.id);
-    setEditForm({
-      name: customer.name,
-      phone: customer.phone,
-      address: customer.address,
-      initialDue: String(customer.dueAmount ?? customer.totalDue ?? 0),
-      purchaseDate: customer.paymentHistory?.find(entry => entry.type === 'sale')?.purchaseDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-      paymentDate: customer.paymentHistory?.find(entry => entry.type === 'sale' && entry.duePaymentDate)?.duePaymentDate?.slice(0, 10) || ''
-    });
+  const submitPayment = () => {
+    const amount = Number(paymentValue);
+    if (!amount || amount <= 0) return;
+    onReceivePayment(paymentCustomerId, amount, paymentDate || new Date().toISOString());
+    closePayment();
   };
 
-  const saveEdit = (customerId) => {
-    const existingCustomer = customers.find(customer => customer.id === customerId);
-    const updatedCustomer = {
-      ...existingCustomer,
-      name: editForm.name.trim(),
-      phone: editForm.phone.trim(),
-      address: editForm.address.trim(),
-      dueAmount: Math.max(0, Number(editForm.initialDue || 0)),
-      totalDue: Math.max(0, Number(editForm.initialDue || 0)),
-      paymentHistory: (existingCustomer.paymentHistory || []).map(entry => {
-        if (entry.type === 'sale') {
-          return {
-            ...entry,
-            purchaseDate: editForm.purchaseDate ? `${editForm.purchaseDate}T00:00:00.000Z` : entry.purchaseDate,
-            paymentStatus: entry.remainingDue > 0 ? (entry.amountReceived > 0 ? 'Partial Due' : 'Full Due') : 'Paid'
-          };
-        }
-        return entry;
-      })
-    };
-    onUpdateCustomer(updatedCustomer);
-    setEditingCustomerId(null);
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'Paid': return <span className="badge badge-success">{t.customer.paymentStatusPaid}</span>;
+      case 'Partial Due': return <span className="badge badge-warning">{t.customer.paymentStatusPartial}</span>;
+      case 'Full Due': return <span className="badge badge-danger">{t.customer.paymentStatusFull}</span>;
+      default: return <span className="badge badge-info">{t.customer.paymentStatusNoPurchase}</span>;
+    }
   };
 
   return (
     <div className="page-container fade-in">
-      <div className="customer-panel-summary">
-        <div className="glass-card customer-summary-card">
-          <h3>Shop Balance</h3>
-          <p className="summary-amount">৳{Number(shopBalance || 0).toFixed(2)}</p>
+
+      {/* Page Header */}
+      <div className="inventory-header">
+        <div>
+          <h2>{t.customer.registerTitle}</h2>
+          <p className="subtitle">{t.customer.registerDesc}</p>
         </div>
+        <button className="btn btn-primary" onClick={openAddModal}>
+          {t.customer.addButton}
+        </button>
       </div>
 
-      <div className="customer-panel-grid">
-        <div className="glass-card customer-form-card">
-          <h2>Customer Register</h2>
-          <p className="section-description">
-            Store customer details for future billing and follow-up.
-          </p>
-
-          <form className="customer-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="customerName">Customer Name</label>
-              <input
-                id="customerName"
-                name="name"
-                className="form-control"
-                placeholder="Enter full name"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="customerPhone">Phone Number</label>
-              <input
-                id="customerPhone"
-                name="phone"
-                className="form-control"
-                placeholder="Enter phone number"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="customerAddress">Address</label>
-              <textarea
-                id="customerAddress"
-                name="address"
-                className="form-control customer-textarea"
-                placeholder="Enter address"
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="customerInitialDue">Initial Due Balance</label>
-              <input
-                id="customerInitialDue"
-                name="initialDue"
-                type="number"
-                min="0"
-                step="any"
-                className="form-control"
-                placeholder="0"
-                value={formData.initialDue}
-                onChange={handleChange}
-              />
-            </div>
-
-            {feedback && <p className="customer-feedback">{feedback}</p>}
-
-            <button type="submit" className="btn btn-primary">
-              Save Customer
+      {/* Filters Toolbar */}
+      <div className="glass-card toolbar-card">
+        <div className="toolbar-tabs-row">
+          <div className="customer-tabs">
+            <button
+              className={`tab-btn ${activeTab === 'All' ? 'active' : ''}`}
+              onClick={() => setActiveTab('All')}
+            >
+              {t.customer.tabAll}
             </button>
-          </form>
-        </div>
+            <button
+              className={`tab-btn tab-yellow ${activeTab === '15' ? 'active' : ''}`}
+              onClick={() => setActiveTab('15')}
+            >
+              {t.customer.tab15}
+            </button>
+            <button
+              className={`tab-btn tab-red ${activeTab === '30' ? 'active' : ''}`}
+              onClick={() => setActiveTab('30')}
+            >
+              {t.customer.tab30}
+            </button>
+          </div>
 
-        <div className="glass-card customer-list-card">
-          <div className="customer-list-header">
-            <h3>Saved Customers</h3>
+          <div className="form-group no-margin customer-search-inline">
             <input
+              type="text"
               className="form-control"
-              placeholder="Search by name or phone"
+              placeholder={t.customer.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="reminder-panels">
-            <div className="reminder-panel warning-panel">
-              <h4>15 Days Due</h4>
-              <p>15 Days Due - Payment Pending</p>
-              {sortedCustomers.filter(customer => getDueStatus(customer) === 'warning').map(customer => (
-                <div key={`warning-${customer.id}`} className="reminder-item">{customer.name}</div>
-              ))}
-            </div>
-            <div className="reminder-panel danger-panel">
-              <h4>1 Month Due</h4>
-              <p>1 Month Due - Payment Overdue</p>
-              {sortedCustomers.filter(customer => getDueStatus(customer) === 'red').map(customer => (
-                <div key={`danger-${customer.id}`} className="reminder-item">{customer.name}</div>
-              ))}
-            </div>
+          <div className="form-group no-margin customer-balance-box">
+            <label className="form-label">{t.customer.shopBalance}</label>
+            <p className="customer-balance-value">৳{Number(shopBalance || 0).toFixed(2)}</p>
           </div>
-
-          {customers.length === 0 ? (
-            <div className="empty-state">
-              <p>No customers have been saved yet.</p>
-            </div>
-          ) : (
-            <div className="customer-list">
-              {sortedCustomers.map((customer) => {
-                const status = getDueStatus(customer);
-                const rowClass = status === 'red' ? 'customer-card customer-card-red' : status === 'warning' ? 'customer-card customer-card-warning' : 'customer-card';
-                return (
-                  <div key={customer.id} className={rowClass}>
-                    <div className="customer-card-header">
-                      <h4>{customer.name}</h4>
-                      {status === 'red' && <span className="status-pill red">1 Month Due - Payment Overdue</span>}
-                      {status === 'warning' && <span className="status-pill yellow">15 Days Due - Payment Pending</span>}
-                    </div>
-                    <p><strong>Phone:</strong> <a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">{customer.phone}</a></p>
-                    <p><strong>Address:</strong> {customer.address}</p>
-                    <p><strong>Total Purchase Amount:</strong> ৳{Number(customer.totalPurchaseAmount || 0).toFixed(2)}</p>
-                    <p><strong>Cash Paid:</strong> ৳{Number(customer.cashPaid || 0).toFixed(2)}</p>
-                    <p><strong>Due Amount:</strong> ৳{Number(customer.dueAmount ?? customer.totalDue ?? 0).toFixed(2)}</p>
-                    <p><strong>Purchase Date:</strong> {getLatestPurchaseDate(customer)}</p>
-                    <p><strong>Due Payment Date:</strong> {customer.paymentHistory?.find(entry => entry.type === 'sale' && entry.duePaymentDate)?.duePaymentDate?.slice(0, 10) || '—'}</p>
-                    <p><strong>Payment Status:</strong> {getPaymentStatus(customer)}</p>
-
-                    {activePaymentId === customer.id ? (
-                      <div className="payment-box">
-                        <input
-                          type="number"
-                          min="0"
-                          step="any"
-                          className="form-control"
-                          value={paymentValue}
-                          onChange={(e) => setPaymentValue(e.target.value)}
-                          placeholder="Amount"
-                        />
-                        <input
-                          type="date"
-                          className="form-control"
-                          value={paymentDate}
-                          onChange={(e) => setPaymentDate(e.target.value)}
-                        />
-                        <button className="btn btn-primary btn-sm" onClick={() => submitPayment(customer.id)}>Save</button>
-                      </div>
-                    ) : (
-                      <div className="customer-actions">
-                        <button className="btn btn-secondary btn-sm" onClick={() => openPayment(customer)}>Receive Payment</button>
-                        {currentRole === 'Admin' && (
-                          <>
-                            <button className="btn btn-secondary btn-sm" onClick={() => startEdit(customer)}>Edit</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => onDeleteCustomer(customer.id)}>Delete</button>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    {editingCustomerId === customer.id && (
-                      <div className="edit-box">
-                        <input className="form-control" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                        <input className="form-control" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                        <textarea className="form-control customer-textarea" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
-                        <input type="number" className="form-control" value={editForm.initialDue} onChange={(e) => setEditForm({ ...editForm, initialDue: e.target.value })} />
-                        <label className="form-label">Purchase Date</label>
-                        <input type="date" className="form-control" value={editForm.purchaseDate} onChange={(e) => setEditForm({ ...editForm, purchaseDate: e.target.value })} />
-                        <label className="form-label">Due Payment Date</label>
-                        <input type="date" className="form-control" value={editForm.paymentDate} onChange={(e) => setEditForm({ ...editForm, paymentDate: e.target.value })} />
-                        <div className="customer-actions">
-                          <button className="btn btn-primary btn-sm" onClick={() => saveEdit(customer.id)}>Save</button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => setEditingCustomerId(null)}>Cancel</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Customers Table */}
+      <div className="table-wrapper">
+        <div className="table-container">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>{t.customer.tableId}</th>
+                <th>{t.customer.tableName}</th>
+                <th>{t.customer.tablePhone}</th>
+                <th>{t.customer.tableAddress}</th>
+                <th>{t.customer.tableCash}</th>
+                <th>{t.customer.tableDue}</th>
+                <th>{t.customer.tableStatus}</th>
+                <th>{t.customer.tableActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedCustomers.map((customer) => {
+                const status = getPaymentStatus(customer);
+                const bucket = getDueBucket(customer);
+                const rowClass = bucket === '30' ? 'row-danger' : bucket === '15' ? 'row-warning' : '';
+                return (
+                  <React.Fragment key={customer.id}>
+                    <tr className={rowClass}>
+                      <td><code className="item-id">{customer.id}</code></td>
+                      <td>
+                        <div className="med-title-cell">
+                          <strong className={bucket === '30' ? 'text-danger strong' : bucket === '15' ? 'text-warning strong' : ''}>{customer.name}</strong>
+                          {status === 'Full Due' && <span className="cell-badge badge-danger">{t.customer.paymentStatusFull}</span>}
+                          {status === 'Partial Due' && <span className="cell-badge badge-warning">{t.customer.paymentStatusPartial}</span>}
+                        </div>
+                      </td>
+                      <td><a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">{customer.phone}</a></td>
+                      <td className="generic-cell">{customer.address}</td>
+                      <td>৳ {Number(customer.cashPaid || 0).toFixed(2)}</td>
+                      <td>
+                        <span className={Number(customer.dueAmount ?? customer.totalDue ?? 0) > 0 ? 'text-danger strong' : ''}>
+                          ৳ {Number(customer.dueAmount ?? customer.totalDue ?? 0).toFixed(2)}
+                        </span>
+                      </td>
+                      <td>{getStatusBadge(status)}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn btn-secondary btn-sm" onClick={() => openPayment(customer)} title={t.customer.receivePayment}>💰</button>
+                          <button className="btn btn-secondary btn-sm edit-btn" onClick={() => openEditModal(customer)} title={t.customer.edit}>✏️</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setHistoryId(historyId === customer.id ? null : customer.id)} title={historyId === customer.id ? t.customer.hideHistory : t.customer.viewHistory}>
+                            📜
+                          </button>
+                          <button className="btn btn-secondary btn-sm delete-btn" onClick={() => handleDelete(customer.id)} title={t.customer.delete}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {historyId === customer.id && (
+                      <tr className="history-row">
+                        <td colSpan={8}>
+                          <div className="history-box">
+                            <h5>{t.customer.historyTitle}</h5>
+                            <div className="history-list">
+                              {getHistoryEntries(customer)
+                                .map((entry) => (
+                                  <div key={entry.id} className={`history-item history-${entry.type}`}>
+                                    <div className="history-main">
+                                      <span className="history-badge purchase">{entry.type === 'sale' ? t.customer.typeSale : t.customer.typePayment}</span>
+                                      <span className="history-date">{formatDateTime(getTransactionTimestamp(entry))}</span>
+                                      <span className="history-detail">
+                                        {entry.invoiceNumber ? `${t.customer.invoice}: ${entry.invoiceNumber} · ` : ''}
+                                        {entry.type === 'sale' ? (
+                                          <>
+                                            {t.customer.saleProducts}: {getSaleProductsLabel(entry)} · {t.customer.totalPurchase} {formatAmount(entry.totalPurchaseAmount)} · {t.customer.cashPaid} {formatAmount(entry.cashPaid)} · {t.customer.dueCreated} {formatAmount(entry.dueCreated)} · {t.customer.totalOutstandingDue} {formatAmount(entry.totalOutstandingDue)}
+                                          </>
+                                        ) : (
+                                          <>
+                                            {t.customer.paymentAmount} {formatAmount(entry.paymentAmount)} · {t.customer.previousDue} {formatAmount(entry.previousDue)} · {t.customer.remainingDueAfterPayment} {formatAmount(entry.remainingDue)}
+                                          </>
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                            {(!customer.paymentHistory || customer.paymentHistory.length === 0) && (
+                              <p className="empty-history">{t.customer.noHistory}</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+
+              {sortedCustomers.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="empty-table-cell">
+                    {t.customer.empty}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add / Edit Customer Modal */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-container">
+            <div className="modal-header">
+              <h3>{modalMode === 'add' ? t.customer.modalAddTitle : t.customer.modalEditTitle}</h3>
+              <button className="modal-close-btn" onClick={closeModal}>×</button>
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="modal-form">
+              <div className="modal-form-grid">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="cName">{t.customer.nameLabel} *</label>
+                  <input
+                    type="text"
+                    id="cName"
+                    required
+                    placeholder={t.customer.namePlaceholder}
+                    className="form-control"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="cPhone">{t.customer.phoneLabel} *</label>
+                  <input
+                    type="text"
+                    id="cPhone"
+                    required
+                    placeholder={t.customer.phonePlaceholder}
+                    className="form-control"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="cAddress">{t.customer.addressLabel} *</label>
+                <textarea
+                  id="cAddress"
+                  required
+                  placeholder={t.customer.addressPlaceholder}
+                  className="form-control customer-textarea"
+                  rows="2"
+                  value={formAddress}
+                  onChange={(e) => setFormAddress(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="cDue">{t.customer.initialDueLabel}</label>
+                <input
+                  type="number"
+                  id="cDue"
+                  min="0"
+                  step="any"
+                  className="form-control"
+                  placeholder="0"
+                  value={formInitialDue}
+                  onChange={(e) => setFormInitialDue(e.target.value)}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                  {t.customer.paymentCancel}
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  {modalMode === 'add' ? t.customer.saveCustomer : t.customer.saveCustomerTitle}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Receive Payment Modal */}
+      {paymentCustomerId && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-container">
+            <div className="modal-header">
+              <h3>{t.customer.receivePayment}</h3>
+              <button className="modal-close-btn" onClick={closePayment}>×</button>
+            </div>
+
+            <form className="modal-form" onSubmit={(e) => { e.preventDefault(); submitPayment(); }}>
+              <div className="form-group">
+                <label className="form-label">{t.customer.paymentAmount}</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="form-control"
+                  placeholder="0"
+                  value={paymentValue}
+                  onChange={(e) => setPaymentValue(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{t.customer.paymentDate}</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closePayment}>
+                  {t.customer.paymentCancel}
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  {t.customer.paymentSave}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

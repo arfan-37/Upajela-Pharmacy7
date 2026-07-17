@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import './Inventory.css';
+import { addDaysToDateOnly, formatDateOnly } from '../utils/dateUtils';
 
-export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole, alertFilter, setAlertFilter }) {
-  const TODAY = '2026-07-09';
-  const THREE_MONTHS_LATER = '2026-10-09';
+export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole, alertFilter, setAlertFilter, t }) {
+  const TODAY = formatDateOnly();
+  const THREE_MONTHS_LATER = addDaysToDateOnly(TODAY, 90);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,7 +49,6 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   });
 
   const openAddModal = () => {
-    if (currentRole !== 'Admin') return;
     setModalMode('add');
     setEditingId(null);
     setFormName('');
@@ -64,7 +64,6 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   };
 
   const openEditModal = (med) => {
-    if (currentRole !== 'Admin') return;
     setModalMode('edit');
     setEditingId(med.id);
     setFormName(med.name);
@@ -81,7 +80,6 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (currentRole !== 'Admin') return;
 
     const payload = {
       name: formName.trim(),
@@ -113,7 +111,6 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   };
 
   const handleDelete = (id) => {
-    if (currentRole !== 'Admin') return;
     if (window.confirm("Are you sure you want to delete this medicine?")) {
       onDeleteMedicine(id);
     }
@@ -125,32 +122,30 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
       {/* Page Header */}
       <div className="inventory-header">
         <div>
-          <h2>Medicine Inventory</h2>
-          <p className="subtitle">Manage catalog, check stocks, shelf locations, and batches.</p>
+          <h2>{t.inventory.title}</h2>
+          <p className="subtitle">{t.inventory.subtitle}</p>
         </div>
-        {currentRole === 'Admin' && (
-          <button className="btn btn-primary" onClick={openAddModal}>
-            ➕ Add New Medicine
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={openAddModal}>
+          {t.inventory.addButton}
+        </button>
       </div>
 
       {/* Filters Toolbar */}
       <div className="glass-card toolbar-card">
         <div className="toolbar-grid">
           <div className="form-group no-margin">
-            <label className="form-label">Search Medicine</label>
+            <label className="form-label">{t.inventory.searchLabel}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="Search by brand or generic name..."
+              placeholder={t.inventory.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <div className="form-group no-margin">
-            <label className="form-label">Category</label>
+            <label className="form-label">{t.inventory.categoryLabel}</label>
             <select
               className="form-control"
               value={categoryFilter}
@@ -163,15 +158,15 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           </div>
 
           <div className="form-group no-margin">
-            <label className="form-label">Status Filter</label>
+            <label className="form-label">{t.inventory.statusLabel}</label>
             <select
               className="form-control"
               value={alertFilter}
               onChange={(e) => setAlertFilter(e.target.value)}
             >
-              <option value="All">All Items</option>
-              <option value="Low Stock">⚠️ Low Stock (&lt; 15)</option>
-              <option value="Expiring/Expired">⏰ Expiry Warnings</option>
+              <option value="All">{t.inventory.allItems}</option>
+              <option value="Low Stock">{t.inventory.lowStockFilter}</option>
+              <option value="Expiring/Expired">{t.inventory.expiryFilter}</option>
             </select>
           </div>
         </div>
@@ -183,16 +178,16 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           <table className="custom-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Brand Name</th>
-                <th>Generic Name</th>
-                <th>Category</th>
-                <th>Stock</th>
-                <th>Retail Price</th>
-                {currentRole === 'Admin' && <th>Purchase Cost</th>}
-                <th>Rack Location</th>
-                <th>Expiry Date</th>
-                {currentRole === 'Admin' && <th>Actions</th>}
+                <th>{t.inventory.tableId}</th>
+                <th>{t.inventory.tableBrand}</th>
+                <th>{t.inventory.tableGeneric}</th>
+                <th>{t.inventory.tableCategory}</th>
+                <th>{t.inventory.tableStock}</th>
+                <th>{t.inventory.tablePrice}</th>
+                <th>{t.inventory.tableCost}</th>
+                <th>{t.inventory.tableLocation}</th>
+                <th>{t.inventory.tableExpiry}</th>
+                <th>{t.inventory.tableActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,41 +219,39 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                       </span>
                     </td>
                     <td>৳ {m.price.toFixed(2)}</td>
-                    {currentRole === 'Admin' && <td>৳ {m.cost.toFixed(2)}</td>}
+                    <td>৳ {m.cost.toFixed(2)}</td>
                     <td>{m.location}</td>
                     <td>
                       <span className={isExpired ? 'text-danger' : isExpiringSoon ? 'text-warning' : ''}>
                         {m.expiryDate}
                       </span>
                     </td>
-                    {currentRole === 'Admin' && (
-                      <td>
-                        <div className="action-buttons">
-                          <button 
-                            className="btn btn-secondary btn-sm edit-btn"
-                            onClick={() => openEditModal(m)}
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="btn btn-secondary btn-sm delete-btn"
-                            onClick={() => handleDelete(m.id)}
-                            title="Delete"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    )}
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn btn-secondary btn-sm edit-btn"
+                          onClick={() => openEditModal(m)}
+                          title="Edit"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn btn-secondary btn-sm delete-btn"
+                          onClick={() => handleDelete(m.id)}
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
 
               {filteredMedicines.length === 0 && (
                 <tr>
-                  <td colSpan={currentRole === 'Admin' ? 10 : 8} className="empty-table-cell">
-                    No medicines match the selected filter conditions.
+                  <td colSpan={10} className="empty-table-cell">
+                    {t.inventory.empty}
                   </td>
                 </tr>
               )}
@@ -272,19 +265,19 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         <div className="modal-overlay">
           <div className="glass-card modal-container">
             <div className="modal-header">
-              <h3>{modalMode === 'add' ? 'Add New Medicine Product' : 'Modify Medicine Details'}</h3>
+              <h3>{modalMode === 'add' ? t.inventory.modalAddTitle : t.inventory.modalEditTitle}</h3>
               <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>×</button>
             </div>
             
             <form onSubmit={handleFormSubmit} className="modal-form">
               <div className="modal-form-grid">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mName">Brand Name *</label>
+                  <label className="form-label" htmlFor="mName">{t.inventory.brandLabel}</label>
                   <input
                     type="text"
                     id="mName"
                     required
-                    placeholder="e.g. Napa Extend"
+                    placeholder={t.inventory.brandPlaceholder}
                     className="form-control"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
@@ -292,12 +285,12 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mGeneric">Generic Name (Chemical Formula) *</label>
+                  <label className="form-label" htmlFor="mGeneric">{t.inventory.genericLabel}</label>
                   <input
                     type="text"
                     id="mGeneric"
                     required
-                    placeholder="e.g. Paracetamol"
+                    placeholder={t.inventory.genericPlaceholder}
                     className="form-control"
                     value={formGeneric}
                     onChange={(e) => setFormGeneric(e.target.value)}
@@ -305,7 +298,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mCategory">Category *</label>
+                  <label className="form-label" htmlFor="mCategory">{t.inventory.categorySelect}</label>
                   <select
                     id="mCategory"
                     className="form-control"
@@ -324,12 +317,12 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mLocation">Shelf Location *</label>
+                  <label className="form-label" htmlFor="mLocation">{t.inventory.locationLabel}</label>
                   <input
                     type="text"
                     id="mLocation"
                     required
-                    placeholder="e.g. Rack A-1, Fridge"
+                    placeholder={t.inventory.locationPlaceholder}
                     className="form-control"
                     value={formLocation}
                     onChange={(e) => setFormLocation(e.target.value)}
@@ -337,7 +330,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mPrice">Retail Selling Price (৳) *</label>
+                  <label className="form-label" htmlFor="mPrice">{t.inventory.priceLabel}</label>
                   <input
                     type="number"
                     id="mPrice"
@@ -352,7 +345,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mCost">Purchase Cost Price (৳) *</label>
+                  <label className="form-label" htmlFor="mCost">{t.inventory.costLabel}</label>
                   <input
                     type="number"
                     id="mCost"
@@ -367,7 +360,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mStock">Stock Quantity *</label>
+                  <label className="form-label" htmlFor="mStock">{t.inventory.stockLabel}</label>
                   <input
                     type="number"
                     id="mStock"
@@ -381,7 +374,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="mExpiry">Expiry Date *</label>
+                  <label className="form-label" htmlFor="mExpiry">{t.inventory.expiryLabel}</label>
                   <input
                     type="date"
                     id="mExpiry"
@@ -394,10 +387,10 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="mDesc">Short Description</label>
+                <label className="form-label" htmlFor="mDesc">{t.inventory.descriptionLabel}</label>
                 <textarea
                   id="mDesc"
-                  placeholder="Additional information about dosage, indications, or warnings..."
+                  placeholder={t.inventory.descriptionPlaceholder}
                   className="form-control"
                   rows="2"
                   value={formDesc}
@@ -407,10 +400,10 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
-                  Cancel
+                  {t.inventory.cancel}
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {modalMode === 'add' ? 'Save Product' : 'Apply Changes'}
+                  {modalMode === 'add' ? t.inventory.saveProduct : t.inventory.applyChanges}
                 </button>
               </div>
             </form>

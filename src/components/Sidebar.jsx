@@ -1,14 +1,15 @@
 import React from 'react';
 import './Sidebar.css';
 
-export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
+export default function Sidebar({ activeTab, setActiveTab, currentRole, t }) {
   // Navigation tabs with icons and role restriction flags
   const tabs = [
-    { id: 'dashboard', name: 'Dashboard', icon: '📊', adminOnly: false },
-    { id: 'pos', name: 'POS Billing', icon: '🛒', adminOnly: false },
-    { id: 'customers', name: 'Customers', icon: '👤', adminOnly: false },
-    { id: 'inventory', name: 'Inventory', icon: '📦', adminOnly: false },
-    { id: 'reports', name: 'Reports & Logs', icon: '📈', adminOnly: true }
+    { id: 'dashboard', name: t.sidebar.dashboard, icon: '📊', adminOnly: false },
+    { id: 'pos', name: t.sidebar.pos, icon: '🛒', adminOnly: false },
+    { id: 'customers', name: t.sidebar.customers, icon: '👤', adminOnly: false },
+    { id: 'inventory', name: t.sidebar.inventory, icon: '📦', adminOnly: false },
+    { id: 'companies', name: t.sidebar.companies, icon: '🏭', adminOnly: false },
+    { id: 'reports', name: t.sidebar.reports, icon: '📈', adminOnly: true }
   ];
 
   return (
@@ -16,8 +17,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
       <div className="sidebar-header">
         <div className="avatar-circle">💊</div>
         <div className="store-info">
-          <h3>Upajela Pharmacy</h3>
-          <span className="location">Dhaka, Bangladesh</span>
+          <h3>{t.header.title}</h3>
+          <span className="location">{t.sidebar.location}</span>
         </div>
       </div>
 
@@ -46,7 +47,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole }) {
       <div className="sidebar-footer">
         <div className="footer-status">
           <span className="status-dot online" />
-          <span className="status-text">System Online</span>
+          <span className="status-text">{t.sidebar.status}</span>
         </div>
         <div className="footer-copyright">
           v1.0.0 &copy; 2026

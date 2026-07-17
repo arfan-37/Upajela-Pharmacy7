@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReceiptModal from './ReceiptModal';
 import './Reports.css';
 
-export default function Reports({ transactions, currentRole }) {
+export default function Reports({ transactions, currentRole, t }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [salespersonFilter, setSalespersonFilter] = useState('All');
   const [selectedTx, setSelectedTx] = useState(null);
@@ -13,8 +13,8 @@ export default function Reports({ transactions, currentRole }) {
       <div className="page-container fade-in">
         <div className="glass-card access-denied-card">
           <span className="denied-icon">🔒</span>
-          <h2>Access Denied</h2>
-          <p>You do not have administrative permissions to view sales logs and financial reporting. Please log in as Upajela (Admin) to view this module.</p>
+          <h2>{t.reports.accessDeniedTitle}</h2>
+          <p>{t.reports.accessDeniedDesc}</p>
         </div>
       </div>
     );
@@ -56,34 +56,34 @@ export default function Reports({ transactions, currentRole }) {
       
       {/* Page Header */}
       <div className="reports-header">
-        <h2>Sales Analysis &amp; Logs</h2>
-        <p className="subtitle">Track revenues, analyze margin metrics, and review historical registers.</p>
+        <h2>{t.reports.title}</h2>
+        <p className="subtitle">{t.reports.subtitle}</p>
       </div>
 
       {/* Financial Summary Cards */}
       <div className="reports-stats-grid">
         <div className="glass-card report-kpi">
-          <span className="report-kpi-lbl">Gross Revenue</span>
+          <span className="report-kpi-lbl">{t.reports.grossRevenue}</span>
           <h3>৳ {totalRevenue.toFixed(2)}</h3>
-          <span className="report-kpi-sub">Total sales transacted</span>
+          <span className="report-kpi-sub">{t.reports.grossRevenueSub}</span>
         </div>
 
         <div className="glass-card report-kpi">
-          <span className="report-kpi-lbl">Total Wholesale Cost</span>
+          <span className="report-kpi-lbl">{t.reports.wholesaleCost}</span>
           <h3>৳ {totalCost.toFixed(2)}</h3>
-          <span className="report-kpi-sub">Total inventory cost value</span>
+          <span className="report-kpi-sub">{t.reports.wholesaleCostSub}</span>
         </div>
 
         <div className="glass-card report-kpi profit-kpi">
-          <span className="report-kpi-lbl">Net Gross Profit</span>
+          <span className="report-kpi-lbl">{t.reports.profit}</span>
           <h3>৳ {totalProfit.toFixed(2)}</h3>
-          <span className="report-kpi-sub">Profit margin: {((totalProfit / (totalRevenue || 1)) * 100).toFixed(1)}%</span>
+          <span className="report-kpi-sub">{t.reports.profitSub.replace('{value}', ((totalProfit / (totalRevenue || 1)) * 100).toFixed(1))}</span>
         </div>
 
         <div className="glass-card report-kpi">
-          <span className="report-kpi-lbl">Average Ticket (ATV)</span>
+          <span className="report-kpi-lbl">{t.reports.averageTicket}</span>
           <h3>৳ {averageTxValue.toFixed(2)}</h3>
-          <span className="report-kpi-sub">Based on {transactions.length} receipts</span>
+          <span className="report-kpi-sub">{t.reports.averageTicketSub.replace('{count}', transactions.length)}</span>
         </div>
       </div>
 
@@ -91,26 +91,26 @@ export default function Reports({ transactions, currentRole }) {
       <div className="glass-card reports-toolbar">
         <div className="reports-toolbar-grid">
           <div className="form-group no-margin">
-            <label className="form-label">Search Transaction</label>
+            <label className="form-label">{t.reports.searchLabel}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="Search by Invoice ID or drug name..."
+              placeholder={t.reports.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <div className="form-group no-margin">
-            <label className="form-label">Cashier Filter</label>
+            <label className="form-label">{t.reports.filterLabel}</label>
             <select
               className="form-control"
               value={salespersonFilter}
               onChange={(e) => setSalespersonFilter(e.target.value)}
             >
-              <option value="All">All Cashiers</option>
-              <option value="Admin">🛡️ Upajela (Admin)</option>
-              <option value="Assistant">🧑‍⚕️ Assistant (Staff)</option>
+              <option value="All">{t.reports.allCashiers}</option>
+              <option value="Admin">{t.reports.adminFilter}</option>
+              <option value="Assistant">{t.reports.assistantFilter}</option>
             </select>
           </div>
         </div>
@@ -122,15 +122,15 @@ export default function Reports({ transactions, currentRole }) {
           <table className="custom-table reports-table">
             <thead>
               <tr>
-                <th>Invoice ID</th>
-                <th>Date &amp; Time</th>
-                <th>Items Purchased</th>
-                <th>Cashier</th>
-                <th>Subtotal</th>
-                <th>Discount</th>
-                <th>VAT (5%)</th>
-                <th>Grand Total</th>
-                <th>Action</th>
+                <th>{t.reports.tableInvoice}</th>
+                <th>{t.reports.tableDate}</th>
+                <th>{t.reports.tableItems}</th>
+                <th>{t.reports.tableCashier}</th>
+                <th>{t.reports.tableSubtotal}</th>
+                <th>{t.reports.tableDiscount}</th>
+                <th>{t.reports.tableTax}</th>
+                <th>{t.reports.tableTotal}</th>
+                <th>{t.reports.tableAction}</th>
               </tr>
             </thead>
             <tbody>
@@ -158,7 +158,7 @@ export default function Reports({ transactions, currentRole }) {
                       onClick={() => setSelectedTx(tx)}
                       title="View & Reprint Receipt"
                     >
-                      👁️ Receipt
+                      👁️ {t.reports.receipt}
                     </button>
                   </td>
                 </tr>
@@ -167,7 +167,7 @@ export default function Reports({ transactions, currentRole }) {
               {filteredTransactions.length === 0 && (
                 <tr>
                   <td colSpan="9" className="empty-table-cell">
-                    No transactions matched your search criteria.
+                    {t.reports.empty}
                   </td>
                 </tr>
               )}
@@ -180,7 +180,8 @@ export default function Reports({ transactions, currentRole }) {
       {selectedTx && (
         <ReceiptModal 
           transaction={selectedTx} 
-          onClose={() => setSelectedTx(null)} 
+          onClose={() => setSelectedTx(null)}
+          t={t}
         />
       )}
     </div>

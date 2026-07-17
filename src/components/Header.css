@@ -57,6 +57,32 @@
   gap: 16px;
 }
 
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--bg-primary);
+  padding: 6px 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.lang-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.lang-btn.active {
+  background-color: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
 .role-switcher-container {
   display: flex;
   align-items: center;

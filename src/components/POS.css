@@ -413,6 +413,33 @@
   margin: 0;
 }
 
+.billing-date-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.billing-date-input {
+  width: 160px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-primary);
+}
+
+.billing-date-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 220px;
+}
+
 /* Animation */
 .animate-fade {
   animation: fadeIn 0.2s ease forwards;
