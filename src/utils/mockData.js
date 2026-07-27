@@ -168,16 +168,184 @@ export const initialMedicines = [
     description: "Anti-allergy and asthma support"
   },
   {
-    id: "MED-015",
-    name: "Zerif 200",
-    genericName: "Cefixime",
+    id: "MED-016",
+    name: "Aceclo 200",
+    genericName: "Aceclofenac",
     category: "Tablet",
-    price: 32.00,
-    cost: 26.00,
-    stock: 38,
-    expiryDate: "2027-09-14",
-    location: "Rack D-4",
+    price: 5.00,
+    cost: 3.80,
+    stock: 55,
+    expiryDate: "2026-05-20",
+    location: "Rack A-5",
+    description: "Pain relief and anti-inflammatory"
+  },
+  {
+    id: "MED-017",
+    name: "Rivotril 0.5",
+    genericName: "Clonazepam",
+    category: "Tablet",
+    price: 15.00,
+    cost: 11.50,
+    stock: 20,
+    expiryDate: "2026-06-30",
+    location: "Rack F-1",
+    description: "Anticonvulsant and anxiolytic"
+  },
+  {
+    id: "MED-018",
+    name: "Nitromak 5",
+    genericName: "Glyceryl Trinitrate",
+    category: "Tablet",
+    price: 18.00,
+    cost: 14.00,
+    stock: 0,
+    expiryDate: "2026-07-18",
+    location: "Rack F-2",
+    description: "Anti-anginal tablet - EXPIRED"
+  },
+  {
+    id: "MED-019",
+    name: "Ciprocin 500",
+    genericName: "Ciprofloxacin",
+    category: "Tablet",
+    price: 22.00,
+    cost: 17.50,
+    stock: 40,
+    expiryDate: "2026-05-15",
+    location: "Rack D-5",
+    description: "Antibiotic for infections"
+  },
+  {
+    id: "MED-020",
+    name: "Clopilet 75",
+    genericName: "Clopidogrel Bisulfate",
+    category: "Tablet",
+    price: 35.00,
+    cost: 28.00,
+    stock: 30,
+    expiryDate: "2026-04-20",
+    location: "Rack G-1",
+    description: "Antiplatelet for heart patients"
+  },
+  {
+    id: "MED-021",
+    name: "Pantec D",
+    genericName: "Pantoprazole + Domperidone",
+    category: "Capsule",
+    price: 12.00,
+    cost: 9.50,
+    stock: 65,
+    expiryDate: "2026-08-01",
+    location: "Rack B-5",
+    description: "Acidity and gastric relief"
+  },
+  {
+    id: "MED-022",
+    name: "Rifadin 600",
+    genericName: "Rifampicin",
+    category: "Tablet",
+    price: 45.00,
+    cost: 36.00,
+    stock: 18,
+    expiryDate: "2026-07-25",
+    location: "Rack H-1",
+    description: "Anti-TB antibiotic - expiring very soon"
+  },
+  {
+    id: "MED-023",
+    name: "Etorikox 90",
+    genericName: "Etoricoxib",
+    category: "Tablet",
+    price: 20.00,
+    cost: 15.50,
+    stock: 48,
+    expiryDate: "2026-09-15",
+    location: "Rack A-6",
+    description: "Pain relief for arthritis"
+  },
+  {
+    id: "MED-024",
+    name: "Met XL 25",
+    genericName: "Metoprolol Succinate",
+    category: "Tablet",
+    price: 16.00,
+    cost: 12.50,
+    stock: 35,
+    expiryDate: "2026-10-01",
+    location: "Rack G-2",
+    description: "Beta-blocker for blood pressure"
+  },
+  {
+    id: "MED-025",
+    name: "Brufen 400",
+    genericName: "Ibuprofen",
+    category: "Tablet",
+    price: 8.00,
+    cost: 6.20,
+    stock: 90,
+    expiryDate: "2026-08-10",
+    location: "Rack A-7",
+    description: "Pain reliever and fever reducer"
+  },
+  {
+    id: "MED-026",
+    name: "Septran DS",
+    genericName: "Trimethoprim + Sulfamethoxazole",
+    category: "Tablet",
+    price: 25.00,
+    cost: 19.50,
+    stock: 60,
+    expiryDate: "2027-03-15",
+    location: "Rack D-6",
     description: "Broad-spectrum antibiotic"
+  },
+  {
+    id: "MED-027",
+    name: "Bromhexine 8",
+    genericName: "Bromhexine Hydrochloride",
+    category: "Tablet",
+    price: 6.00,
+    cost: 4.50,
+    stock: 120,
+    expiryDate: "2027-06-20",
+    location: "Rack E-2",
+    description: "Expectorant for cough"
+  },
+  {
+    id: "MED-028",
+    name: "Norflox TZ",
+    genericName: "Norfloxacin + Tinidazole",
+    category: "Tablet",
+    price: 30.00,
+    cost: 23.00,
+    stock: 45,
+    expiryDate: "2027-04-10",
+    location: "Rack D-7",
+    description: "Antibiotic and antiprotozoal"
+  },
+  {
+    id: "MED-029",
+    name: "Telmisafe 40",
+    genericName: "Telmisartan",
+    category: "Tablet",
+    price: 28.00,
+    cost: 21.00,
+    stock: 75,
+    expiryDate: "2027-07-01",
+    location: "Rack G-3",
+    description: "Angiotensin receptor blocker for BP"
+  },
+  {
+    id: "MED-031",
+    name: "Test Expire 20",
+    genericName: "Paracetamol",
+    category: "Tablet",
+    price: 10.00,
+    cost: 7.50,
+    stock: 50,
+    expiryDate: "2026-07-19",
+    location: "Rack Z-1",
+    description: "Dummy medicine for auto-expiry testing"
   }
 ];
 
@@ -389,26 +557,132 @@ export const initialCompanies = [
     ]
   },
   {
-    id: "COMP-009",
-    name: "Radiant Pharmaceuticals",
-    contact: "01888003344",
+    id: "COMP-010",
+    name: "Innova Pharma",
+    contact: "01812004567",
+    address: "Chittagong",
+    totalPurchaseAmount: 15800,
+    amountPaid: 8000,
+    dueAmount: 7800,
+    transactionHistory: [
+      {
+        id: "CTX-10010",
+        type: "purchase",
+        createdAt: "2026-06-28T10:00:00.000Z",
+        date: "2026-06-28T10:00:00.000Z",
+        products: [
+          { name: "Aceclo 200", quantity: 200 },
+          { name: "Bromhexine 8", quantity: 300 }
+        ],
+        totalAmount: 15800,
+        amountPaid: 8000,
+        dueAmount: 7800,
+        dueDate: "2026-07-28",
+        paymentDate: null
+      }
+    ]
+  },
+  {
+    id: "COMP-011",
+    name: "Bengal Chemicals",
+    contact: "01733007890",
     address: "Narayanganj",
-    totalPurchaseAmount: 7600,
-    amountPaid: 7600,
+    totalPurchaseAmount: 6400,
+    amountPaid: 6400,
     dueAmount: 0,
     transactionHistory: [
       {
-        id: "CTX-9001",
+        id: "CTX-10011",
         type: "purchase",
-        createdAt: "2026-07-16T09:15:00.000Z",
-        date: "2026-07-16T09:15:00.000Z",
+        createdAt: "2026-07-10T09:00:00.000Z",
+        date: "2026-07-10T09:00:00.000Z",
         products: [
-          { name: "Zerif 200", quantity: 25 }
+          { name: "Rivotril 0.5", quantity: 100 },
+          { name: "Nitromak 5", quantity: 50 }
         ],
-        totalAmount: 7600,
-        amountPaid: 7600,
+        totalAmount: 6400,
+        amountPaid: 6400,
         dueAmount: 0,
-        dueDate: "2026-07-16",
+        dueDate: "2026-08-10",
+        paymentDate: "2026-07-10"
+      }
+    ]
+  },
+  {
+    id: "COMP-012",
+    name: "Popular Pharmaceuticals",
+    contact: "01944008901",
+    address: "Savar, Dhaka",
+    totalPurchaseAmount: 28500,
+    amountPaid: 12000,
+    dueAmount: 16500,
+    transactionHistory: [
+      {
+        id: "CTX-10012",
+        type: "purchase",
+        createdAt: "2026-07-05T11:00:00.000Z",
+        date: "2026-07-05T11:00:00.000Z",
+        products: [
+          { name: "Ciprocin 500", quantity: 150 },
+          { name: "Clopilet 75", quantity: 100 },
+          { name: "Telmisafe 40", quantity: 200 }
+        ],
+        totalAmount: 28500,
+        amountPaid: 12000,
+        dueAmount: 16500,
+        dueDate: "2026-08-05",
+        paymentDate: null
+      }
+    ]
+  },
+  {
+    id: "COMP-013",
+    name: "Pharma 2000",
+    contact: "01655009012",
+    address: "Gazipur",
+    totalPurchaseAmount: 9500,
+    amountPaid: 5000,
+    dueAmount: 4500,
+    transactionHistory: [
+      {
+        id: "CTX-10013",
+        type: "purchase",
+        createdAt: "2026-07-14T10:00:00.000Z",
+        date: "2026-07-14T10:00:00.000Z",
+        products: [
+          { name: "Etorikox 90", quantity: 120 },
+          { name: "Met XL 25", quantity: 80 }
+        ],
+        totalAmount: 9500,
+        amountPaid: 5000,
+        dueAmount: 4500,
+        dueDate: "2026-08-14",
+        paymentDate: null
+      }
+    ]
+  },
+  {
+    id: "COMP-014",
+    name: "Abu Pharmaceuticals",
+    contact: "01566000123",
+    address: "Manikganj",
+    totalPurchaseAmount: 11200,
+    amountPaid: 11200,
+    dueAmount: 0,
+    transactionHistory: [
+      {
+        id: "CTX-10014",
+        type: "purchase",
+        createdAt: "2026-07-16T08:30:00.000Z",
+        date: "2026-07-16T08:30:00.000Z",
+        products: [
+          { name: "Brufen 400", quantity: 250 },
+          { name: "Glucored Forte", quantity: 100 }
+        ],
+        totalAmount: 11200,
+        amountPaid: 11200,
+        dueAmount: 0,
+        dueDate: "2026-08-16",
         paymentDate: "2026-07-16"
       }
     ]
@@ -677,29 +951,155 @@ export const initialCustomers = [
     ]
   },
   {
-    id: "CUST-011",
-    name: "Lipi Akter",
-    phone: "01733344556",
+    id: "CUST-012",
+    name: "Rafiqul Islam",
+    phone: "01677001123",
+    address: "Bogura",
+    totalPurchaseAmount: 3500,
+    cashPaid: 2000,
+    dueAmount: 1500,
+    totalDue: 1500,
+    dueEntries: [],
+    paymentHistory: [
+      {
+        id: "hist-012a",
+        type: "sale",
+        createdAt: "2026-07-05T10:00:00.000Z",
+        purchaseDate: "2026-07-05T10:00:00.000Z",
+        invoiceNumber: "INV-1012",
+        totalBill: 3500,
+        cashPaid: 2000,
+        dueAmount: 1500,
+        duePaymentDate: null,
+        amountReceived: 2000,
+        remainingDue: 1500,
+        paymentStatus: "Partial Due"
+      }
+    ]
+  },
+  {
+    id: "CUST-013",
+    name: "Nazma Sultana",
+    phone: "01788002234",
     address: "Sherpur, Bogura",
-    totalPurchaseAmount: 2100,
-    cashPaid: 2100,
+    totalPurchaseAmount: 7200,
+    cashPaid: 7200,
     dueAmount: 0,
     totalDue: 0,
     dueEntries: [],
     paymentHistory: [
       {
-        id: "hist-011a",
+        id: "hist-013a",
         type: "sale",
-        createdAt: "2026-07-15T17:20:00.000Z",
-        purchaseDate: "2026-07-15T17:20:00.000Z",
-        invoiceNumber: "INV-1011",
-        totalBill: 2100,
-        cashPaid: 2100,
+        createdAt: "2026-07-08T14:00:00.000Z",
+        purchaseDate: "2026-07-08T14:00:00.000Z",
+        invoiceNumber: "INV-1013",
+        totalBill: 7200,
+        cashPaid: 7200,
         dueAmount: 0,
-        duePaymentDate: "2026-07-15T17:20:00.000Z",
-        amountReceived: 2100,
+        duePaymentDate: "2026-07-08T14:00:00.000Z",
+        amountReceived: 7200,
         remainingDue: 0,
         paymentStatus: "Paid"
+      }
+    ]
+  },
+  {
+    id: "CUST-014",
+    name: "Mahmudul Hasan",
+    phone: "01899003345",
+    address: "Shibganj, Bogura",
+    totalPurchaseAmount: 4800,
+    cashPaid: 0,
+    dueAmount: 4800,
+    totalDue: 4800,
+    dueEntries: [],
+    paymentHistory: [
+      {
+        id: "hist-014a",
+        type: "sale",
+        createdAt: "2026-07-12T09:00:00.000Z",
+        purchaseDate: "2026-07-12T09:00:00.000Z",
+        invoiceNumber: "INV-1014",
+        totalBill: 4800,
+        cashPaid: 0,
+        dueAmount: 4800,
+        duePaymentDate: null,
+        amountReceived: 0,
+        remainingDue: 4800,
+        paymentStatus: "Full Due"
+      }
+    ]
+  },
+  {
+    id: "CUST-015",
+    name: "Rahima Khatun",
+    phone: "01910004456",
+    address: "Sherpur",
+    totalPurchaseAmount: 15600,
+    cashPaid: 6000,
+    dueAmount: 9600,
+    totalDue: 9600,
+    dueEntries: [],
+    paymentHistory: [
+      {
+        id: "hist-015a",
+        type: "sale",
+        createdAt: "2026-06-15T11:00:00.000Z",
+        purchaseDate: "2026-06-15T11:00:00.000Z",
+        invoiceNumber: "INV-1015",
+        totalBill: 15600,
+        cashPaid: 6000,
+        dueAmount: 9600,
+        duePaymentDate: null,
+        amountReceived: 6000,
+        remainingDue: 9600,
+        paymentStatus: "Partial Due"
+      },
+      {
+        id: "hist-015b",
+        type: "payment",
+        createdAt: "2026-07-01T10:00:00.000Z",
+        paymentDate: "2026-07-01T10:00:00.000Z",
+        amountReceived: 2000,
+        remainingDue: 9600,
+        invoiceNumber: "INV-1015"
+      },
+      {
+        id: "hist-015c",
+        type: "payment",
+        createdAt: "2026-07-10T16:00:00.000Z",
+        paymentDate: "2026-07-10T16:00:00.000Z",
+        amountReceived: 1000,
+        remainingDue: 6600,
+        invoiceNumber: "INV-1015"
+      }
+    ]
+  },
+  {
+    id: "CUST-016",
+    name: "Jahangir Alam",
+    phone: "01322005567",
+    address: "Dupchanchia, Bogura",
+    totalPurchaseAmount: 2200,
+    cashPaid: 0,
+    dueAmount: 2200,
+    totalDue: 2200,
+    dueEntries: [],
+    paymentHistory: [
+      {
+        id: "hist-016a",
+        type: "sale",
+        createdAt: "2026-07-15T08:00:00.000Z",
+        purchaseDate: "2026-07-15T08:00:00.000Z",
+        invoiceNumber: "INV-1016",
+        totalBill: 2200,
+        cashPaid: 0,
+        dueAmount: 2200,
+        duePaymentDate: null,
+        amountReceived: 0,
+        remainingDue: 2200,
+        paymentStatus: "Full Due"
       }
     ]
   }
@@ -797,18 +1197,308 @@ export const initialTransactions = [
     changeGiven: 31.60
   },
   {
-    id: "TX-1007",
-    timestamp: "2026-07-10T15:45:00Z",
+    id: "TX-1008",
+    timestamp: "2026-07-11T10:45:00Z",
+    salesperson: "Assistant",
+    items: [
+      { id: "MED-016", name: "Aceclo 200", quantity: 15, price: 5.00, cost: 3.80 },
+      { id: "MED-020", name: "Clopilet 75", quantity: 10, price: 35.00, cost: 28.00 }
+    ],
+    subtotal: 650.00,
+    discount: 20.00,
+    tax: 31.50,
+    total: 661.50,
+    cashReceived: 700.00,
+    changeGiven: 38.50
+  },
+  {
+    id: "TX-1009",
+    timestamp: "2026-07-12T11:30:00Z",
     salesperson: "Upazila (Admin)",
     items: [
-      { id: "MED-015", name: "Zerif 200", quantity: 3, price: 32.00, cost: 26.00 },
-      { id: "MED-001", name: "Napa Extend", quantity: 18, price: 3.00, cost: 2.30 }
+      { id: "MED-021", name: "Pantec D", quantity: 20, price: 12.00, cost: 9.50 },
+      { id: "MED-025", name: "Brufen 400", quantity: 30, price: 8.00, cost: 6.20 }
     ],
-    subtotal: 150.00,
+    subtotal: 480.00,
+    discount: 10.00,
+    tax: 23.50,
+    total: 493.50,
+    cashReceived: 500.00,
+    changeGiven: 6.50
+  },
+  {
+    id: "TX-1010",
+    timestamp: "2026-07-13T16:15:00Z",
+    salesperson: "Assistant",
+    items: [
+      { id: "MED-026", name: "Septran DS", quantity: 25, price: 25.00, cost: 19.50 },
+      { id: "MED-027", name: "Bromhexine 8", quantity: 40, price: 6.00, cost: 4.50 }
+    ],
+    subtotal: 850.00,
     discount: 0.00,
-    tax: 7.50,
-    total: 157.50,
-    cashReceived: 200.00,
-    changeGiven: 42.50
+    tax: 42.50,
+    total: 892.50,
+    cashReceived: 900.00,
+    changeGiven: 7.50
+  },
+  {
+    id: "TX-1011",
+    timestamp: "2026-07-14T09:20:00Z",
+    salesperson: "Upazila (Admin)",
+    items: [
+      { id: "MED-029", name: "Telmisafe 40", quantity: 15, price: 28.00, cost: 21.00 },
+      { id: "MED-030", name: "Glucored Forte", quantity: 10, price: 18.00, cost: 14.00 }
+    ],
+    subtotal: 600.00,
+    discount: 15.00,
+    tax: 29.25,
+    total: 614.25,
+    cashReceived: 620.00,
+    changeGiven: 5.75
+  },
+  {
+    id: "TX-1012",
+    timestamp: "2026-07-15T13:45:00Z",
+    salesperson: "Assistant",
+    items: [
+      { id: "MED-022", name: "Rifadin 600", quantity: 5, price: 45.00, cost: 36.00 },
+      { id: "MED-023", name: "Etorikox 90", quantity: 8, price: 20.00, cost: 15.50 },
+      { id: "MED-024", name: "Met XL 25", quantity: 12, price: 16.00, cost: 12.50 }
+    ],
+    subtotal: 532.00,
+    discount: 5.00,
+    tax: 26.35,
+    total: 553.35,
+    cashReceived: 560.00,
+    changeGiven: 6.65
+  }
+];
+
+export const initialFinancialReports = [
+  {
+    id: "RPT-2026-07-27-1001",
+    reportDate: "2026-07-27",
+    createdAt: "2026-07-27T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-27T18:30:00.000Z",
+    totalSalesAmount: 2450.00,
+    totalPurchaseCost: 1420.00,
+    grossProfit: 1030.00,
+    netProfit: 1030.00,
+    totalCashReceived: 1850.00,
+    totalDueCollected: 300.00,
+    totalCustomerDueCreated: 450.00,
+    totalAmountPaidToCompanies: 1200.00,
+    totalCompanyPayable: 800.00,
+    totalTransactions: 18,
+    salesTransactions: [
+      { id: "TX-2001", timestamp: "2026-07-27T10:15:00Z", salesperson: "Assistant", total: 320.00, cashReceived: 320.00, items: [{name:"Napa Extend", quantity:20, price:3.00}] },
+      { id: "TX-2002", timestamp: "2026-07-27T11:30:00Z", salesperson: "Upazila (Admin)", total: 580.00, cashReceived: 500.00, items: [{name:"Seclo 20", quantity:30, price:7.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-001", companyName: "Incepta Pharmaceuticals", totalAmount: 1200.00, amountPaid: 1200.00, dueAmount: 0, date: "2026-07-27T09:00:00Z", products: [{name:"Napa Extend", quantity:100}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-001", customerName: "Abdul Karim", amount: 300.00, date: "2026-07-27T14:20:00Z", remainingDue: 1200.00, invoiceNumber: "INV-2001" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-26-1002",
+    reportDate: "2026-07-26",
+    createdAt: "2026-07-26T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-26T19:45:00.000Z",
+    totalSalesAmount: 1890.00,
+    totalPurchaseCost: 1120.00,
+    grossProfit: 770.00,
+    netProfit: 770.00,
+    totalCashReceived: 1500.00,
+    totalDueCollected: 200.00,
+    totalCustomerDueCreated: 320.00,
+    totalAmountPaidToCompanies: 800.00,
+    totalCompanyPayable: 650.00,
+    totalTransactions: 14,
+    salesTransactions: [
+      { id: "TX-1991", timestamp: "2026-07-26T09:20:00Z", salesperson: "Assistant", total: 450.00, cashReceived: 450.00, items: [{name:"Fexo 120", quantity:25, price:7.00}] },
+      { id: "TX-1992", timestamp: "2026-07-26T15:10:00Z", salesperson: "Upazila (Admin)", total: 680.00, cashReceived: 600.00, items: [{name:"Napa Extend", quantity:40, price:3.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-002", companyName: "Square Pharmaceuticals", totalAmount: 800.00, amountPaid: 800.00, dueAmount: 0, date: "2026-07-26T10:30:00Z", products: [{name:"Seclo 20", quantity:60}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-002", customerName: "Rahima Begum", amount: 200.00, date: "2026-07-26T16:45:00Z", remainingDue: 800.00, invoiceNumber: "INV-1991" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-25-1003",
+    reportDate: "2026-07-25",
+    createdAt: "2026-07-25T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-25T20:00:00.000Z",
+    totalSalesAmount: 2100.00,
+    totalPurchaseCost: 1350.00,
+    grossProfit: 750.00,
+    netProfit: 750.00,
+    totalCashReceived: 1700.00,
+    totalDueCollected: 250.00,
+    totalCustomerDueCreated: 380.00,
+    totalAmountPaidToCompanies: 950.00,
+    totalCompanyPayable: 720.00,
+    totalTransactions: 16,
+    salesTransactions: [
+      { id: "TX-1981", timestamp: "2026-07-25T10:00:00Z", salesperson: "Upazila (Admin)", total: 520.00, cashReceived: 520.00, items: [{name:"Ace 500", quantity:30, price:5.00}] },
+      { id: "TX-1982", timestamp: "2026-07-25T14:25:00Z", salesperson: "Assistant", total: 390.00, cashReceived: 350.00, items: [{name:"Fexo 120", quantity:20, price:7.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-003", companyName: "Beximco Pharmaceuticals", totalAmount: 950.00, amountPaid: 600.00, dueAmount: 350.00, date: "2026-07-25T11:00:00Z", products: [{name:"Ace 500", quantity:80}, {name:"Fexo 120", quantity:40}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-003", customerName: "Mohammad Ali", amount: 250.00, date: "2026-07-25T17:30:00Z", remainingDue: 1500.00, invoiceNumber: "INV-1981" }
+    ],
+    companyPayments: [
+      { companyId: "COMP-003", companyName: "Beximco Pharmaceuticals", amount: 350.00, date: "2026-07-25T16:00:00Z", remainingDue: 0 }
+    ],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-24-1004",
+    reportDate: "2026-07-24",
+    createdAt: "2026-07-24T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-24T21:15:00.000Z",
+    totalSalesAmount: 1750.00,
+    totalPurchaseCost: 980.00,
+    grossProfit: 770.00,
+    netProfit: 770.00,
+    totalCashReceived: 1400.00,
+    totalDueCollected: 180.00,
+    totalCustomerDueCreated: 280.00,
+    totalAmountPaidToCompanies: 600.00,
+    totalCompanyPayable: 450.00,
+    totalTransactions: 12,
+    salesTransactions: [
+      { id: "TX-1971", timestamp: "2026-07-24T09:45:00Z", salesperson: "Assistant", total: 410.00, cashReceived: 410.00, items: [{name:"Napa Extend", quantity:50, price:3.00}] },
+      { id: "TX-1972", timestamp: "2026-07-24T16:20:00Z", salesperson: "Upazila (Admin)", total: 620.00, cashReceived: 550.00, items: [{name:"Seclo 20", quantity:40, price:7.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-004", companyName: "Renata Limited", totalAmount: 600.00, amountPaid: 600.00, dueAmount: 0, date: "2026-07-24T10:00:00Z", products: [{name:"Napa Extend", quantity:120}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-004", customerName: "Fatima Akter", amount: 180.00, date: "2026-07-24T18:00:00Z", remainingDue: 900.00, invoiceNumber: "INV-1971" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-23-1005",
+    reportDate: "2026-07-23",
+    createdAt: "2026-07-23T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-23T19:30:00.000Z",
+    totalSalesAmount: 1980.00,
+    totalPurchaseCost: 1150.00,
+    grossProfit: 830.00,
+    netProfit: 830.00,
+    totalCashReceived: 1600.00,
+    totalDueCollected: 220.00,
+    totalCustomerDueCreated: 340.00,
+    totalAmountPaidToCompanies: 700.00,
+    totalCompanyPayable: 580.00,
+    totalTransactions: 15,
+    salesTransactions: [
+      { id: "TX-1961", timestamp: "2026-07-23T11:00:00Z", salesperson: "Upazila (Admin)", total: 480.00, cashReceived: 480.00, items: [{name:"Ace 500", quantity:40, price:5.00}] },
+      { id: "TX-1962", timestamp: "2026-07-23T15:45:00Z", salesperson: "Assistant", total: 350.00, cashReceived: 300.00, items: [{name:"Fexo 120", quantity:25, price:7.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-001", companyName: "Incepta Pharmaceuticals", totalAmount: 700.00, amountPaid: 700.00, dueAmount: 0, date: "2026-07-23T09:30:00Z", products: [{name:"Seclo 20", quantity:50}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-005", customerName: "Nasir Uddin", amount: 220.00, date: "2026-07-23T17:15:00Z", remainingDue: 1100.00, invoiceNumber: "INV-1961" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-22-1006",
+    reportDate: "2026-07-22",
+    createdAt: "2026-07-22T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-22T20:45:00.000Z",
+    totalSalesAmount: 1650.00,
+    totalPurchaseCost: 950.00,
+    grossProfit: 700.00,
+    netProfit: 700.00,
+    totalCashReceived: 1300.00,
+    totalDueCollected: 150.00,
+    totalCustomerDueCreated: 260.00,
+    totalAmountPaidToCompanies: 500.00,
+    totalCompanyPayable: 400.00,
+    totalTransactions: 11,
+    salesTransactions: [
+      { id: "TX-1951", timestamp: "2026-07-22T10:30:00Z", salesperson: "Assistant", total: 380.00, cashReceived: 380.00, items: [{name:"Napa Extend", quantity:45, price:3.00}] },
+      { id: "TX-1952", timestamp: "2026-07-22T16:00:00Z", salesperson: "Upazila (Admin)", total: 520.00, cashReceived: 480.00, items: [{name:"Ace 500", quantity:35, price:5.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-002", companyName: "Square Pharmaceuticals", totalAmount: 500.00, amountPaid: 500.00, dueAmount: 0, date: "2026-07-22T11:00:00Z", products: [{name:"Napa Extend", quantity:100}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-006", customerName: "Salma Khatun", amount: 150.00, date: "2026-07-22T18:30:00Z", remainingDue: 750.00, invoiceNumber: "INV-1951" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-21-1007",
+    reportDate: "2026-07-21",
+    createdAt: "2026-07-21T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-21T21:00:00.000Z",
+    totalSalesAmount: 1820.00,
+    totalPurchaseCost: 1080.00,
+    grossProfit: 740.00,
+    netProfit: 740.00,
+    totalCashReceived: 1450.00,
+    totalDueCollected: 190.00,
+    totalCustomerDueCreated: 300.00,
+    totalAmountPaidToCompanies: 650.00,
+    totalCompanyPayable: 520.00,
+    totalTransactions: 13,
+    salesTransactions: [
+      { id: "TX-1941", timestamp: "2026-07-21T09:15:00Z", salesperson: "Upazila (Admin)", total: 440.00, cashReceived: 440.00, items: [{name:"Seclo 20", quantity:25, price:7.00}] },
+      { id: "TX-1942", timestamp: "2026-07-21T14:50:00Z", salesperson: "Assistant", total: 370.00, cashReceived: 330.00, items: [{name:"Fexo 120", quantity:30, price:7.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-003", companyName: "Beximco Pharmaceuticals", totalAmount: 650.00, amountPaid: 650.00, dueAmount: 0, date: "2026-07-21T10:00:00Z", products: [{name:"Ace 500", quantity:60}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-007", customerName: "Rafiqul Islam", amount: 190.00, date: "2026-07-21T19:00:00Z", remainingDue: 1300.00, invoiceNumber: "INV-1941" }
+    ],
+    companyPayments: [],
+    isClosed: false
+  },
+  {
+    id: "RPT-2026-07-20-1008",
+    reportDate: "2026-07-20",
+    createdAt: "2026-07-20T00:00:00.000Z",
+    lastUpdatedAt: "2026-07-20T20:30:00.000Z",
+    totalSalesAmount: 1560.00,
+    totalPurchaseCost: 880.00,
+    grossProfit: 680.00,
+    netProfit: 680.00,
+    totalCashReceived: 1250.00,
+    totalDueCollected: 140.00,
+    totalCustomerDueCreated: 220.00,
+    totalAmountPaidToCompanies: 450.00,
+    totalCompanyPayable: 380.00,
+    totalTransactions: 10,
+    salesTransactions: [
+      { id: "TX-1931", timestamp: "2026-07-20T11:00:00Z", salesperson: "Assistant", total: 360.00, cashReceived: 360.00, items: [{name:"Napa Extend", quantity:40, price:3.00}] },
+      { id: "TX-1932", timestamp: "2026-07-20T15:30:00Z", salesperson: "Upazila (Admin)", total: 410.00, cashReceived: 380.00, items: [{name:"Ace 500", quantity:28, price:5.00}] }
+    ],
+    companyPurchases: [
+      { companyId: "COMP-001", companyName: "Incepta Pharmaceuticals", totalAmount: 450.00, amountPaid: 450.00, dueAmount: 0, date: "2026-07-20T09:00:00Z", products: [{name:"Seclo 20", quantity:40}] }
+    ],
+    customerPayments: [
+      { customerId: "CUST-008", customerName: "Jahangir Alam", amount: 140.00, date: "2026-07-20T17:45:00Z", remainingDue: 980.00, invoiceNumber: "INV-1931" }
+    ],
+    companyPayments: [],
+    isClosed: false
   }
 ];

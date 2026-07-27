@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Inventory.css';
-import { addDaysToDateOnly, formatDateOnly } from '../utils/dateUtils';
+import { addDaysToDateOnly, formatDateOnly, normalizeDate } from '../utils/dateUtils';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole, alertFilter, setAlertFilter, t }) {
   const TODAY = formatDateOnly();
@@ -16,6 +17,10 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
   const [editingId, setEditingId] = useState(null);
   
+  // Delete confirmation state
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   // Form State
   const [formName, setFormName] = useState('');
   const [formGeneric, setFormGeneric] = useState('');
@@ -30,6 +35,10 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   // Extract unique categories for filter
   const categories = ['All', ...new Set(medicines.map(m => m.category))];
 
+  const expiredCount = medicines.filter(m => normalizeDate(m.expiryDate) <= TODAY).length;
+  const expiringCount = medicines.filter(m => { const d = normalizeDate(m.expiryDate); return d > TODAY && d <= THREE_MONTHS_LATER; }).length;
+  const lowStockCount = medicines.filter(m => m.stock < 15).length;
+
   // Filtering Logic
   const filteredMedicines = medicines.filter(m => {
     const matchesSearch = 
@@ -38,11 +47,14 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
     
     const matchesCategory = categoryFilter === 'All' || m.category === categoryFilter;
     
+    const expiry = normalizeDate(m.expiryDate);
     let matchesAlert = true;
     if (alertFilter === 'Low Stock') {
       matchesAlert = m.stock < 15;
     } else if (alertFilter === 'Expiring/Expired') {
-      matchesAlert = m.expiryDate <= THREE_MONTHS_LATER;
+      matchesAlert = expiry > TODAY && expiry <= THREE_MONTHS_LATER;
+    } else if (alertFilter === 'Expired') {
+      matchesAlert = expiry <= TODAY;
     }
 
     return matchesSearch && matchesCategory && matchesAlert;
@@ -111,13 +123,26 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this medicine?")) {
-      onDeleteMedicine(id);
+    setDeleteTargetId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTargetId != null) {
+      onDeleteMedicine(deleteTargetId);
     }
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
   };
 
   return (
-    <div className="page-container fade-in">
+    <div>
+      <div className="page-container fade-in">
       
       {/* Page Header */}
       <div className="inventory-header">
@@ -165,11 +190,19 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
               onChange={(e) => setAlertFilter(e.target.value)}
             >
               <option value="All">{t.inventory.allItems}</option>
-              <option value="Low Stock">{t.inventory.lowStockFilter}</option>
-              <option value="Expiring/Expired">{t.inventory.expiryFilter}</option>
+              <option value="Low Stock">{t.inventory.lowStockFilter} ({lowStockCount})</option>
+              <option value="Expiring/Expired">{t.inventory.expiryFilter} ({expiringCount})</option>
+              <option value="Expired">{t.inventory.expiredFilter} ({expiredCount})</option>
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Debug: System date reference */}
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'right' }}>
+        System date reference: <strong style={{ color: 'var(--text-secondary)' }}>{TODAY}</strong> &nbsp;|&nbsp; 
+        Expired: <strong style={{ color: 'var(--danger)' }}>{expiredCount}</strong> &nbsp;|&nbsp; 
+        Expiring: <strong style={{ color: 'var(--warning)' }}>{expiringCount}</strong>
       </div>
 
       {/* Inventory Table */}
@@ -193,8 +226,9 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
             <tbody>
               {filteredMedicines.map(m => {
                 const isLowStock = m.stock < 15;
-                const isExpired = m.expiryDate <= TODAY;
-                const isExpiringSoon = m.expiryDate > TODAY && m.expiryDate <= THREE_MONTHS_LATER;
+                const expiry = normalizeDate(m.expiryDate);
+                const isExpired = expiry <= TODAY;
+                const isExpiringSoon = expiry > TODAY && expiry <= THREE_MONTHS_LATER;
 
                 let rowClass = "";
                 if (isExpired) rowClass = "row-expired";
@@ -259,9 +293,10 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           </table>
         </div>
       </div>
+    </div>
 
-      {/* Add / Edit Modal Overlay */}
-      {isModalOpen && (
+    {/* Add / Edit Modal Overlay */}
+    {isModalOpen && (
         <div className="modal-overlay">
           <div className="glass-card modal-container">
             <div className="modal-header">
@@ -410,6 +445,15 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           </div>
         </div>
       )}
+      
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        title={t.common.confirmDeleteTitle}
+        message={t.common.confirmDelete}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        t={t}
+      />
     </div>
   );
 }

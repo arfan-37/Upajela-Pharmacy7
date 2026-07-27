@@ -1,6 +1,6 @@
 import React from 'react';
 import './Dashboard.css';
-import { addDaysToDateOnly, formatDateOnly } from '../utils/dateUtils';
+import { addDaysToDateOnly, formatDateOnly, normalizeDate } from '../utils/dateUtils';
 
 export default function Dashboard({ medicines, transactions, currentRole, setActiveTab, setInventoryFilter, t }) {
   const TODAY = formatDateOnly();
@@ -12,27 +12,17 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
   const lowStockMedicines = medicines.filter(m => m.stock < 15);
   const lowStockCount = lowStockMedicines.length;
 
-  const expiredMedicines = medicines.filter(m => m.expiryDate <= TODAY);
-  const expiringSoonMedicines = medicines.filter(m => m.expiryDate > TODAY && m.expiryDate <= THREE_MONTHS_LATER);
+  const expiredMedicines = medicines.filter(m => normalizeDate(m.expiryDate) <= TODAY);
+  const expiringSoonMedicines = medicines.filter(m => {
+    const expiry = normalizeDate(m.expiryDate);
+    return expiry > TODAY && expiry <= THREE_MONTHS_LATER;
+  });
   const urgentExpiryCount = expiredMedicines.length + expiringSoonMedicines.length;
 
-  // Financial Stats (Admin Only)
-  const totalRevenue = transactions.reduce((sum, tx) => sum + tx.total, 0);
-  
-  const totalProfit = transactions.reduce((sum, tx) => {
-    const markupProfit = tx.items.reduce((itemSum, item) => {
-      const cost = item.cost || (item.price * 0.8); // fallback to 80% if cost missing
-      return itemSum + ((item.price - cost) * item.quantity);
-    }, 0);
-    return sum + (markupProfit - tx.discount);
-  }, 0);
-
-  // SVG Chart Calculation (Admin Only)
-  // Let's summarize sales by Category
+  // Sales by Category (general inventory statistics - safe for all roles)
   const categorySales = {};
   transactions.forEach(tx => {
     tx.items.forEach(item => {
-      // Find category of this medicine
       const med = medicines.find(m => m.id === item.id);
       const cat = med ? med.category : 'Other';
       categorySales[cat] = (categorySales[cat] || 0) + (item.price * item.quantity);
@@ -41,7 +31,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
 
   const categories = Object.keys(categorySales);
   const salesValues = Object.values(categorySales);
-  const maxSalesValue = Math.max(...salesValues, 100); // at least 100 as ceiling for chart
+  const maxSalesValue = Math.max(...salesValues, 100);
 
   return (
     <div className="page-container fade-in">
@@ -71,28 +61,6 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
 
       {/* KPI Cards Grid */}
       <div className="kpi-grid">
-        {currentRole === 'Admin' && (
-          <>
-            <div className="glass-card kpi-card">
-              <div className="kpi-icon revenue-icon">৳</div>
-              <div className="kpi-data">
-                <span className="kpi-title">{t.dashboard.revenue}</span>
-                <h3 className="kpi-value">৳ {totalRevenue.toFixed(2)}</h3>
-                <span className="kpi-subtext">Cumulative Sales</span>
-              </div>
-            </div>
-
-            <div className="glass-card kpi-card">
-              <div className="kpi-icon profit-icon">📈</div>
-              <div className="kpi-data">
-                <span className="kpi-title">{t.dashboard.profit}</span>
-                <h3 className="kpi-value">৳ {totalProfit.toFixed(2)}</h3>
-                <span className="kpi-subtext">Margin: {((totalProfit / (totalRevenue || 1)) * 100).toFixed(1)}%</span>
-              </div>
-            </div>
-          </>
-        )}
-
         <div className="glass-card kpi-card">
           <div className="kpi-icon items-icon">📦</div>
           <div className="kpi-data">

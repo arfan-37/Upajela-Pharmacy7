@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './CustomerPanel.css';
 import { rebuildCustomerHistoryTimeline } from '../utils/customerHistory';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function CustomerPanel({ customers, shopBalance, onAddCustomer, onUpdateCustomer, onDeleteCustomer, onReceivePayment, currentRole, t }) {
   // Search & Filter state
@@ -20,9 +21,14 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
   const [paymentCustomerId, setPaymentCustomerId] = useState(null);
   const [paymentValue, setPaymentValue] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   // Expanded history row
   const [historyId, setHistoryId] = useState(null);
+
+  // Delete confirmation state
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const formatDateTime = (value) => {
     if (!value) return '—';
@@ -33,7 +39,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
 
   const formatAmount = (value) => `৳ ${Number(value || 0).toFixed(2)}`;
 
-  const getTransactionTimestamp = (entry) => entry.createdAt || entry.purchaseDate || entry.paymentDate || '';
+  const getTransactionTimestamp = (entry) => entry.createdAt || entry.purchaseDate || entry.paymentDate || new Date().toISOString();
 
   const getSaleProductsLabel = (entry) => {
     const products = Array.isArray(entry.products) ? entry.products : [];
@@ -55,28 +61,46 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
     return 'Full Due';
   };
 
-  // Classify a customer by how long their due has been outstanding:
-  // '30' => 30+ days, '15' => 15-29 days, 'none' => paid / no due.
+  // Classify a customer by how long their due has been outstanding.
+  // Uses the latest payment date as the start of the current due cycle,
+  // so a payment (full or partial) restarts the clock.
   const getDueBucket = (customer) => {
     const dueAmount = Number(customer.dueAmount ?? customer.totalDue ?? 0);
     if (dueAmount <= 0) return 'none';
 
+    // Latest payment date from paymentHistory
+    const paymentDates = (customer.paymentHistory || [])
+      .filter((entry) => entry.type === 'payment' && entry.paymentDate)
+      .map((entry) => new Date(entry.paymentDate).getTime())
+      .filter((d) => !Number.isNaN(d));
+
+    // Also consider duePaymentDate on sale entries (set when a payment is applied)
+    const salePaymentDates = (customer.paymentHistory || [])
+      .filter((entry) => entry.type === 'sale' && entry.duePaymentDate)
+      .map((entry) => new Date(entry.duePaymentDate).getTime())
+      .filter((d) => !Number.isNaN(d));
+
+    const allDates = [...paymentDates, ...salePaymentDates];
+    const latestPayment = allDates.length > 0 ? Math.max(...allDates) : null;
+
+    // Fallback: use the most recent sale date if no payments were ever made
     const saleDates = (customer.paymentHistory || [])
       .filter((entry) => entry.type === 'sale' && entry.purchaseDate)
       .map((entry) => new Date(entry.purchaseDate).getTime())
       .filter((d) => !Number.isNaN(d));
 
-    if (saleDates.length === 0) {
+    const referenceDate = latestPayment || (saleDates.length > 0 ? Math.max(...saleDates) : null);
+
+    if (!referenceDate) {
       const createdAt = customer.createdAt ? new Date(customer.createdAt).getTime() : NaN;
       if (Number.isNaN(createdAt)) return '15';
-
       const daysOld = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
       if (daysOld >= 30) return '30';
       if (daysOld >= 15) return '15';
       return 'none';
     }
-    const oldest = Math.min(...saleDates);
-    const daysOld = (Date.now() - oldest) / (1000 * 60 * 60 * 24);
+
+    const daysOld = (Date.now() - referenceDate) / (1000 * 60 * 60 * 24);
     if (daysOld >= 30) return '30';
     if (daysOld >= 15) return '15';
     return 'none';
@@ -169,7 +193,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
         name: formName.trim(),
         phone: formPhone.trim(),
         address: formAddress.trim(),
-        totalPurchaseAmount: 0,
+        totalPurchaseAmount: initialDue,
         cashPaid: 0,
         dueAmount: initialDue,
         totalDue: initialDue,
@@ -181,13 +205,16 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
       if (duplicate) return;
 
       const existingCustomer = customers.find(c => c.id === editingId);
+      const newDue = Math.max(0, Number(formInitialDue || 0));
+      const cashPaid = Number(existingCustomer.cashPaid || 0);
       const updatedCustomer = {
         ...existingCustomer,
         name: formName.trim(),
         phone: formPhone.trim(),
         address: formAddress.trim(),
-        dueAmount: Math.max(0, Number(formInitialDue || 0)),
-        totalDue: Math.max(0, Number(formInitialDue || 0))
+        dueAmount: newDue,
+        totalDue: newDue,
+        totalPurchaseAmount: Number((cashPaid + newDue).toFixed(2))
       };
       onUpdateCustomer(updatedCustomer);
     }
@@ -196,26 +223,54 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      onDeleteCustomer(id);
+    setDeleteTargetId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTargetId != null) {
+      onDeleteCustomer(deleteTargetId);
     }
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
   };
 
   const openPayment = (customer) => {
     setPaymentCustomerId(customer.id);
     setPaymentValue('');
     setPaymentDate(new Date().toISOString().slice(0, 10));
+    setPaymentError('');
   };
 
   const closePayment = () => {
     setPaymentCustomerId(null);
     setPaymentValue('');
     setPaymentDate('');
+    setPaymentError('');
   };
 
   const submitPayment = () => {
     const amount = Number(paymentValue);
-    if (!amount || amount <= 0) return;
+    if (!Number.isFinite(amount) || !amount || amount <= 0) return;
+
+    const customer = customers.find((entry) => entry.id === paymentCustomerId);
+    const currentDue = Number(customer?.dueAmount ?? customer?.totalDue ?? 0);
+
+    if (amount > currentDue) {
+      setPaymentError(
+        `${t.customer.paymentExceedsDue} ${t.customer.paymentExceedsDueDetail
+          .replace('{currentDue}', formatAmount(currentDue))
+          .replace('{enteredAmount}', formatAmount(amount))}`
+      );
+      return;
+    }
+
+    setPaymentError('');
     onReceivePayment(paymentCustomerId, amount, paymentDate || new Date().toISOString());
     closePayment();
   };
@@ -230,7 +285,8 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
   };
 
   return (
-    <div className="page-container fade-in">
+    <div>
+      <div className="page-container fade-in">
 
       {/* Page Header */}
       <div className="inventory-header">
@@ -294,6 +350,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
                 <th>{t.customer.tableName}</th>
                 <th>{t.customer.tablePhone}</th>
                 <th>{t.customer.tableAddress}</th>
+                <th>{t.customer.tableTotal}</th>
                 <th>{t.customer.tableCash}</th>
                 <th>{t.customer.tableDue}</th>
                 <th>{t.customer.tableStatus}</th>
@@ -318,6 +375,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
                       </td>
                       <td><a href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">{customer.phone}</a></td>
                       <td className="generic-cell">{customer.address}</td>
+                      <td>৳ {Number(customer.totalPurchaseAmount || 0).toFixed(2)}</td>
                       <td>৳ {Number(customer.cashPaid || 0).toFixed(2)}</td>
                       <td>
                         <span className={Number(customer.dueAmount ?? customer.totalDue ?? 0) > 0 ? 'text-danger strong' : ''}>
@@ -339,7 +397,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
 
                     {historyId === customer.id && (
                       <tr className="history-row">
-                        <td colSpan={8}>
+                        <td colSpan={9}>
                           <div className="history-box">
                             <h5>{t.customer.historyTitle}</h5>
                             <div className="history-list">
@@ -357,7 +415,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
                                           </>
                                         ) : (
                                           <>
-                                            {t.customer.paymentAmount} {formatAmount(entry.paymentAmount)} · {t.customer.previousDue} {formatAmount(entry.previousDue)} · {t.customer.remainingDueAfterPayment} {formatAmount(entry.remainingDue)}
+                                            {t.customer.paymentAmount} {formatAmount(entry.paymentAmount)} · {t.customer.previousDue} {formatAmount(entry.previousDue)} · {t.customer.remainingDueAfterPayment} {formatAmount(entry.remainingDue)} · 📅 {formatDateTime(entry.paymentDate || entry.createdAt)}
                                           </>
                                         )}
                                       </span>
@@ -378,7 +436,7 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
 
               {sortedCustomers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="empty-table-cell">
+                  <td colSpan={9} className="empty-table-cell">
                     {t.customer.empty}
                   </td>
                 </tr>
@@ -388,8 +446,8 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
         </div>
       </div>
 
-      {/* Add / Edit Customer Modal */}
-      {isModalOpen && (
+    {/* Add / Edit Customer Modal */}
+    {isModalOpen && (
         <div className="modal-overlay">
           <div className="glass-card modal-container">
             <div className="modal-header">
@@ -485,8 +543,12 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
                   className="form-control"
                   placeholder="0"
                   value={paymentValue}
-                  onChange={(e) => setPaymentValue(e.target.value)}
+                  onChange={(e) => {
+                    setPaymentValue(e.target.value);
+                    if (paymentError) setPaymentError('');
+                  }}
                 />
+                {paymentError && <div className="payment-error">{paymentError}</div>}
               </div>
 
               <div className="form-group">
@@ -511,6 +573,16 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
           </div>
         </div>
       )}
+      
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        title={t.common.confirmDeleteTitle}
+        message={t.common.confirmDelete}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        t={t}
+      />
+    </div>
     </div>
   );
 }

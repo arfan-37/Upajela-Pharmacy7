@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './CompanyPanel.css';
 import { rebuildCompanyTransactionTimeline } from '../utils/companyHistory';
+import ConfirmDialog from './ConfirmDialog';
 
 const genId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const todayStr = () => {
@@ -61,6 +62,7 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
   const [paymentCompanyId, setPaymentCompanyId] = useState(null);
   const [paymentValue, setPaymentValue] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   // Edit transaction state
   const [editingTx, setEditingTx] = useState(null);
@@ -111,6 +113,28 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
 
   const closeModal = () => {
     setIsModalOpen(false);
+  };
+
+  // Delete confirmation state
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDeleteClick = (id) => {
+    setDeleteTargetId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTargetId != null) {
+      onDeleteCompany(deleteTargetId);
+    }
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setDeleteTargetId(null);
+    setIsDeleteDialogOpen(false);
   };
 
   const handleSubmit = (e) => {
@@ -240,17 +264,30 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
     setPaymentCompanyId(company.id);
     setPaymentValue('');
     setPaymentDate(todayStr());
+    setPaymentError('');
   };
 
   const closePayment = () => {
     setPaymentCompanyId(null);
     setPaymentValue('');
     setPaymentDate('');
+    setPaymentError('');
   };
 
   const submitPayment = () => {
     const amount = Number(paymentValue);
-    if (!amount || amount <= 0) return;
+    if (!Number.isFinite(amount) || !amount || amount <= 0) return;
+
+    const company = companies.find((entry) => entry.id === paymentCompanyId);
+    const currentDue = Number(company?.dueAmount || 0);
+
+    if (amount > currentDue) {
+      const message = `${t.company.paymentExceedsDue} ${t.company.paymentExceedsDueDetail.replace('{currentDue}', `৳ ${currentDue.toFixed(2)}`).replace('{enteredAmount}', `৳ ${amount.toFixed(2)}`)}`;
+      setPaymentError(message);
+      return;
+    }
+
+    setPaymentError('');
     onRecordCompanyPayment(paymentCompanyId, amount, paymentDate || todayStr());
     setFeedback(t.company.feedbackPayment);
     closePayment();
@@ -381,7 +418,8 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
   };
 
   return (
-    <div className="page-container fade-in">
+    <div>
+      <div className="page-container fade-in">
 
       {/* Page Header */}
       <div className="inventory-header">
@@ -479,7 +517,7 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
                           <button className="btn btn-secondary btn-sm" onClick={() => setActivePurchaseId(activePurchaseId === company.id ? null : company.id)} title={t.company.addPurchase}>➕</button>
                           <button className="btn btn-secondary btn-sm edit-btn" onClick={() => startEdit(company)} title={t.company.edit}>✏️</button>
                           <button className="btn btn-secondary btn-sm" onClick={() => setHistoryId(historyId === company.id ? null : company.id)} title={historyId === company.id ? t.company.hideHistory : t.company.viewHistory}>📜</button>
-                          <button className="btn btn-secondary btn-sm delete-btn" onClick={() => onDeleteCompany(company.id)} title={t.company.delete}>🗑️</button>
+                          <button className="btn btn-secondary btn-sm delete-btn" onClick={() => handleDeleteClick(company.id)} title={t.company.delete}>🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -623,9 +661,10 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
           </table>
         </div>
       </div>
+    </div>
 
-      {/* Add Company Modal */}
-      {isModalOpen && (
+    {/* Add Company Modal */}
+    {isModalOpen && (
         <div className="modal-overlay">
           <div className="glass-card modal-container">
             <div className="modal-header">
@@ -711,7 +750,19 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
             <form className="modal-form" onSubmit={(e) => { e.preventDefault(); submitPayment(); }}>
               <div className="form-group">
                 <label className="form-label">{t.company.paymentAmount}</label>
-                <input type="number" min="0" step="any" className="form-control" placeholder="0" value={paymentValue} onChange={(e) => setPaymentValue(e.target.value)} />
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="form-control"
+                  placeholder="0"
+                  value={paymentValue}
+                  onChange={(e) => {
+                    setPaymentValue(e.target.value);
+                    if (paymentError) setPaymentError('');
+                  }}
+                />
+                {paymentError && <div className="payment-error">{paymentError}</div>}
               </div>
               <div className="form-group">
                 <label className="form-label">{t.company.paymentDate}</label>
@@ -725,6 +776,15 @@ export default function CompanyPanel({ companies, onAddCompany, onUpdateCompany,
           </div>
         </div>
       )}
+      
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        title={t.common.confirmDeleteTitle}
+        message={t.common.confirmDelete}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        t={t}
+      />
     </div>
   );
 }

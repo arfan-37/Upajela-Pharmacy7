@@ -17,9 +17,14 @@ import './App.css';
 const normalizeCustomer = (customer) => {
   const historySummary = summarizeCustomerBalances(Array.isArray(customer.paymentHistory) ? customer.paymentHistory : []);
   const hasHistory = historySummary.paymentHistory.length > 0;
-  const totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (customer.totalPurchaseAmount ?? 0));
+  let totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (customer.totalPurchaseAmount ?? 0));
   const cashPaid = Number(hasHistory ? historySummary.cashPaid : (customer.cashPaid ?? 0));
   const dueAmount = Number(hasHistory ? historySummary.dueAmount : (customer.dueAmount ?? customer.totalDue ?? 0));
+
+  const expectedTotal = Number((cashPaid + dueAmount).toFixed(2));
+  if (totalPurchaseAmount < expectedTotal) {
+    totalPurchaseAmount = expectedTotal;
+  }
 
   return {
     ...customer,
@@ -84,6 +89,18 @@ function App() {
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('shabab_language') || 'en';
   });
+
+  // Finance lock ref - Reports can register a lock function here
+  const lockFinanceRef = React.useRef(null);
+  const registerLockFinance = (lockFn) => {
+    lockFinanceRef.current = lockFn;
+  };
+
+  const lockFinance = () => {
+    if (lockFinanceRef.current) {
+      lockFinanceRef.current();
+    }
+  };
 
   // Global States (preserves state across browser tabs using localStorage)
   const [medicines, setMedicines] = useState(() => {
@@ -160,6 +177,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    lockFinance();
     setIsLoggedIn(false);
     localStorage.removeItem('shabab_logged_in');
   };
@@ -503,9 +521,12 @@ function App() {
           <Reports
             transactions={transactions}
             medicines={medicines}
+            customers={customers}
+            companies={companies}
             currentRole={currentRole}
             language={language}
             t={t}
+            onNavigateAway={registerLockFinance}
           />
         );
       case 'customers':
@@ -561,6 +582,9 @@ function App() {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={(tab) => {
+          if (activeTab === 'reports' && tab !== 'reports') {
+            lockFinance();
+          }
           setActiveTab(tab);
           if (tab === 'inventory') {
             setInventoryFilter('All');

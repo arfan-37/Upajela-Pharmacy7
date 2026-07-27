@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReceiptModal from './ReceiptModal';
 import './POS.css';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess, onCreditSale, onAddCustomer, customers, currentRole, t }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +75,28 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
 
   const removeFromCart = (id) => {
     setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Delete confirmation for cart items
+  const [cartDeleteId, setCartDeleteId] = useState(null);
+  const [isCartDeleteDialogOpen, setIsCartDeleteDialogOpen] = useState(false);
+
+  const handleCartDeleteClick = (id) => {
+    setCartDeleteId(id);
+    setIsCartDeleteDialogOpen(true);
+  };
+
+  const confirmCartDelete = () => {
+    if (cartDeleteId != null) {
+      removeFromCart(cartDeleteId);
+    }
+    setCartDeleteId(null);
+    setIsCartDeleteDialogOpen(false);
+  };
+
+  const cancelCartDelete = () => {
+    setCartDeleteId(null);
+    setIsCartDeleteDialogOpen(false);
   };
 
   // Calculations
@@ -188,7 +211,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   };
 
   return (
-    <div className="page-container pos-page-layout fade-in">
+    <div>
+      <div className="page-container pos-page-layout fade-in">
       
       {/* Left panel: Medicine search and grid */}
       <div className="pos-search-panel">
@@ -309,7 +333,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                   <button 
                     type="button" 
                     className="delete-item-btn"
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => handleCartDeleteClick(item.id)}
                     title="Remove item"
                   >
                     🗑️
@@ -514,15 +538,25 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
           </button>
         </form>
       </div>
+    </div>
 
-      {/* Printable receipt rendering portal */}
-      {showReceipt && currentTransaction && (
-        <ReceiptModal 
-          transaction={currentTransaction} 
-          onClose={handleCloseReceipt}
-          t={t}
-        />
-      )}
+    {/* Printable receipt rendering portal */}
+    {showReceipt && currentTransaction && (
+      <ReceiptModal 
+        transaction={currentTransaction} 
+        onClose={handleCloseReceipt}
+        t={t}
+      />
+    )}
+
+    <ConfirmDialog
+      open={isCartDeleteDialogOpen}
+      title={t.common.confirmDeleteTitle}
+      message={t.common.confirmDelete}
+      onConfirm={confirmCartDelete}
+      onCancel={cancelCartDelete}
+      t={t}
+    />
     </div>
   );
 }
