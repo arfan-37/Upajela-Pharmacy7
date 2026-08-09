@@ -18,8 +18,14 @@
 
 .toolbar-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .toolbar-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -125,6 +131,12 @@
   color: var(--accent);
 }
 
+.action-buttons .restock-btn:hover {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: var(--success);
+  color: var(--success);
+}
+
 .action-buttons .delete-btn:hover {
   background-color: var(--danger-light);
   border-color: var(--danger);
@@ -132,3 +144,31 @@
 }
 
 /* Action buttons, table enhancements, badges, empty state, etc. are defined above */
+
+.medicine-history-content {
+  max-height: 65vh;
+  overflow: auto;
+}
+
+.medicine-history-content .history-empty {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-muted);
+}
+
+.medicine-history-content .history-empty span {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.history-table {
+  font-size: 13px;
+}
+
+.history-table th {
+  background-color: var(--bg-card);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}

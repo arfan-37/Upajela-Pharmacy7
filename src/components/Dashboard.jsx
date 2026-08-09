@@ -6,17 +6,43 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
   const TODAY = formatDateOnly();
   const THREE_MONTHS_LATER = addDaysToDateOnly(TODAY, 90);
 
+  const getMedicineEffectiveExpiry = (med) => {
+    const batches = Array.isArray(med.batches) ? med.batches : [];
+    if (batches.length === 0) return normalizeDate(med.expiryDate);
+    return batches.reduce((earliest, batch) => {
+      const d = normalizeDate(batch.expiryDate);
+      return (!earliest || d < earliest) ? d : earliest;
+    }, null);
+  };
+
+  const isMedicineFullyExpired = (med) => {
+    const batches = Array.isArray(med.batches) ? med.batches : [];
+    if (batches.length === 0) return normalizeDate(med.expiryDate) <= TODAY;
+    return batches.every(batch => normalizeDate(batch.expiryDate) <= TODAY);
+  };
+
+  const isMedicineExpiringSoon = (med) => {
+    const batches = Array.isArray(med.batches) ? med.batches : [];
+    if (batches.length === 0) {
+      const d = normalizeDate(med.expiryDate);
+      return d > TODAY && d <= THREE_MONTHS_LATER;
+    }
+    const hasExpired = batches.some(batch => normalizeDate(batch.expiryDate) <= TODAY);
+    if (hasExpired) return false;
+    return batches.some(batch => {
+      const d = normalizeDate(batch.expiryDate);
+      return d > TODAY && d <= THREE_MONTHS_LATER;
+    });
+  };
+
   // Calculations
   const totalItems = medicines.length;
   
   const lowStockMedicines = medicines.filter(m => m.stock < 15);
   const lowStockCount = lowStockMedicines.length;
 
-  const expiredMedicines = medicines.filter(m => normalizeDate(m.expiryDate) <= TODAY);
-  const expiringSoonMedicines = medicines.filter(m => {
-    const expiry = normalizeDate(m.expiryDate);
-    return expiry > TODAY && expiry <= THREE_MONTHS_LATER;
-  });
+  const expiredMedicines = medicines.filter(m => isMedicineFullyExpired(m));
+  const expiringSoonMedicines = medicines.filter(m => isMedicineExpiringSoon(m));
   const urgentExpiryCount = expiredMedicines.length + expiringSoonMedicines.length;
 
   // Sales by Category (general inventory statistics - safe for all roles)
@@ -203,7 +229,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 <span className="alert-icon">☠️</span>
                 <div className="alert-info">
                   <h4>{m.name} <span className="alert-generic">({m.genericName})</span></h4>
-                  <p className="alert-desc text-danger">{t.dashboard.expiredOn.replace('{date}', m.expiryDate)}</p>
+                  <p className="alert-desc text-danger">{t.dashboard.expiredOn.replace('{date}', getMedicineEffectiveExpiry(m))}</p>
                 </div>
                 {currentRole === 'Admin' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('inventory')}>
@@ -218,7 +244,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
                 <span className="alert-icon">📅</span>
                 <div className="alert-info">
                   <h4>{m.name} <span className="alert-generic">({m.genericName})</span></h4>
-                  <p className="alert-desc text-danger">{t.dashboard.expiringSoonText.replace('{date}', m.expiryDate)}</p>
+                  <p className="alert-desc text-danger">{t.dashboard.expiringSoonText.replace('{date}', getMedicineEffectiveExpiry(m))}</p>
                 </div>
                 {currentRole === 'Admin' && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('inventory')}>

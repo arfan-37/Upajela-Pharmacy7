@@ -11,15 +11,29 @@ import CompanyPanel from './components/CompanyPanel';
 import { initialMedicines, initialTransactions, initialCompanies, initialCustomers } from './utils/mockData';
 import { rebuildCustomerHistoryTimeline, summarizeCustomerBalances } from './utils/customerHistory';
 import { rebuildCompanyTransactionTimeline, summarizeCompanyBalances } from './utils/companyHistory';
+import { addInventoryHistoryRecord, addCompanyHistoryRecord } from './utils/historyUtils';
+import { addMedicineHistoryRecord } from './utils/medicineHistoryUtils';
 import { translations } from './utils/translations';
 import './App.css';
 
+const readStoredJson = (key, fallback) => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved === null) return fallback;
+    return JSON.parse(saved);
+  } catch (error) {
+    console.warn(`Failed to parse localStorage item "${key}"`, error);
+    return fallback;
+  }
+};
+
 const normalizeCustomer = (customer) => {
-  const historySummary = summarizeCustomerBalances(Array.isArray(customer.paymentHistory) ? customer.paymentHistory : []);
+  const source = customer && typeof customer === 'object' ? customer : {};
+  const historySummary = summarizeCustomerBalances(Array.isArray(source.paymentHistory) ? source.paymentHistory : []);
   const hasHistory = historySummary.paymentHistory.length > 0;
-  let totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (customer.totalPurchaseAmount ?? 0));
-  const cashPaid = Number(hasHistory ? historySummary.cashPaid : (customer.cashPaid ?? 0));
-  const dueAmount = Number(hasHistory ? historySummary.dueAmount : (customer.dueAmount ?? customer.totalDue ?? 0));
+  let totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (source.totalPurchaseAmount ?? 0));
+  const cashPaid = Number(hasHistory ? historySummary.cashPaid : (source.cashPaid ?? 0));
+  const dueAmount = Number(hasHistory ? historySummary.dueAmount : (source.dueAmount ?? source.totalDue ?? 0));
 
   const expectedTotal = Number((cashPaid + dueAmount).toFixed(2));
   if (totalPurchaseAmount < expectedTotal) {
@@ -27,7 +41,7 @@ const normalizeCustomer = (customer) => {
   }
 
   return {
-    ...customer,
+    ...source,
     totalPurchaseAmount,
     cashPaid,
     dueAmount,
@@ -37,16 +51,17 @@ const normalizeCustomer = (customer) => {
 };
 
 const normalizeCompany = (company) => {
-  const historySummary = summarizeCompanyBalances(Array.isArray(company.transactionHistory) ? company.transactionHistory : []);
+  const source = company && typeof company === 'object' ? company : {};
+  const historySummary = summarizeCompanyBalances(Array.isArray(source.transactionHistory) ? source.transactionHistory : []);
   const hasHistory = historySummary.transactionHistory.length > 0;
-  const totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (company.totalPurchaseAmount ?? 0));
-  const amountPaid = Number(hasHistory ? historySummary.amountPaid : (company.amountPaid ?? 0));
-  const dueAmount = Number(hasHistory ? historySummary.dueAmount : (company.dueAmount ?? (totalPurchaseAmount - amountPaid)));
+  const totalPurchaseAmount = Number(hasHistory ? historySummary.totalPurchaseAmount : (source.totalPurchaseAmount ?? 0));
+  const amountPaid = Number(hasHistory ? historySummary.amountPaid : (source.amountPaid ?? 0));
+  const dueAmount = Number(hasHistory ? historySummary.dueAmount : (source.dueAmount ?? (totalPurchaseAmount - amountPaid)));
 
   return {
-    ...company,
-    contact: company.contact || '',
-    address: company.address || '',
+    ...source,
+    contact: source.contact || '',
+    address: source.address || '',
     totalPurchaseAmount,
     amountPaid,
     dueAmount,
@@ -57,12 +72,21 @@ const normalizeCompany = (company) => {
 const mergeSeedRecords = (savedRecords, seedRecords) => {
   const merged = new Map();
 
+  const addRecord = (record) => {
+    if (!record || typeof record !== 'object') return;
+
+    const recordId = record.id;
+    if (recordId === undefined || recordId === null || recordId === '') return;
+
+    merged.set(String(recordId), record);
+  };
+
   for (const record of Array.isArray(seedRecords) ? seedRecords : []) {
-    merged.set(record.id, record);
+    addRecord(record);
   }
 
   for (const record of Array.isArray(savedRecords) ? savedRecords : []) {
-    merged.set(record.id, record);
+    addRecord(record);
   }
 
   return [...merged.values()];
@@ -96,6 +120,11 @@ function App() {
     lockFinanceRef.current = lockFn;
   };
 
+  const currentRoleRef = React.useRef(currentRole);
+  React.useEffect(() => {
+    currentRoleRef.current = currentRole;
+  }, [currentRole]);
+
   const lockFinance = () => {
     if (lockFinanceRef.current) {
       lockFinanceRef.current();
@@ -104,27 +133,23 @@ function App() {
 
   // Global States (preserves state across browser tabs using localStorage)
   const [medicines, setMedicines] = useState(() => {
-    const saved = localStorage.getItem('shabab_medicines');
-    return saved ? JSON.parse(saved) : initialMedicines;
+    return readStoredJson('shabab_medicines', initialMedicines);
   });
 
   const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem('shabab_transactions');
-    return saved ? JSON.parse(saved) : initialTransactions;
+    return readStoredJson('shabab_transactions', initialTransactions);
   });
 
   const [customers, setCustomers] = useState(() => {
-    const saved = localStorage.getItem('shabab_customers');
-    const parsed = saved ? JSON.parse(saved) : [];
+    const parsed = readStoredJson('shabab_customers', []);
     const merged = mergeSeedRecords(parsed, initialCustomers);
     return merged.map(normalizeCustomer);
   });
 
   const [companies, setCompanies] = useState(() => {
-    const saved = localStorage.getItem('shabab_companies');
-    let parsed = saved ? JSON.parse(saved) : initialCompanies;
-    if (!Array.isArray(parsed) || parsed.length === 0) parsed = initialCompanies;
-    return parsed.map(normalizeCompany);
+    const parsed = readStoredJson('shabab_companies', initialCompanies);
+    const resolved = Array.isArray(parsed) && parsed.length > 0 ? parsed : initialCompanies;
+    return resolved.map(normalizeCompany);
   });
 
   const [shopBalance, setShopBalance] = useState(() => {
@@ -200,9 +225,51 @@ function App() {
     setMedicines(prev => prev.map(m => {
       const cartItem = cartItems.find(c => c.id === m.id);
       if (cartItem) {
+        const previousStock = Number(m.stock || 0);
+        const soldQty = Number(cartItem.quantity || 0);
+        const newStock = Math.max(0, previousStock - soldQty);
+
+        addMedicineHistoryRecord({
+          medicineId: m.id,
+          medicineName: m.name,
+          genericName: m.genericName,
+          category: m.category,
+          action: 'Sold',
+          previousStock,
+          addedQuantity: -soldQty,
+          currentStock: newStock,
+          purchaseCost: Number(m.cost || 0),
+          sellingPrice: Number(m.price || 0),
+          expiryDate: m.expiryDate,
+          shelfLocation: m.location,
+          batchNo: '-',
+          supplier: '-',
+          notes: `Sold via POS - ${soldQty} unit(s)`,
+        }, currentRoleRef.current || 'Staff');
+
+        if (newStock < 15 && previousStock >= 15) {
+          addMedicineHistoryRecord({
+            medicineId: m.id,
+            medicineName: m.name,
+            genericName: m.genericName,
+            category: m.category,
+            action: 'Status Changed',
+            previousStock,
+            addedQuantity: 0,
+            currentStock: newStock,
+            purchaseCost: Number(m.cost || 0),
+            sellingPrice: Number(m.price || 0),
+            expiryDate: m.expiryDate,
+            shelfLocation: m.location,
+            batchNo: '-',
+            supplier: '-',
+            notes: 'Low stock warning - stock below 15',
+          }, currentRoleRef.current || 'Staff');
+        }
+
         return {
           ...m,
-          stock: Math.max(0, m.stock - cartItem.quantity)
+          stock: newStock
         };
       }
       return m;
@@ -359,11 +426,35 @@ function App() {
       transactionHistory: rebuildCompanyTransactionTimeline(Array.isArray(newCompany.transactionHistory) ? newCompany.transactionHistory : [])
     });
     setCompanies(prev => [normalizedCompany, ...prev]);
+
+    const role = currentRoleRef.current || 'Staff';
+    addCompanyHistoryRecord({
+      companyName: normalizedCompany.name,
+      medicineNames: '-',
+      quantity: 0,
+      totalAmount: 0,
+      amountPaid: 0,
+      remainingPayable: 0,
+      paymentStatus: 'Paid',
+      addedBy: role,
+    }, role);
   };
 
   const handleUpdateCompany = (updatedCompany) => {
     const normalizedCompany = normalizeCompany(updatedCompany);
     setCompanies(prev => prev.map(company => company.id === normalizedCompany.id ? normalizedCompany : company));
+
+    const role = currentRoleRef.current || 'Staff';
+    addCompanyHistoryRecord({
+      companyName: normalizedCompany.name,
+      medicineNames: '-',
+      quantity: 0,
+      totalAmount: 0,
+      amountPaid: 0,
+      remainingPayable: 0,
+      paymentStatus: 'Paid',
+      addedBy: role,
+    }, role);
   };
 
   const handleDeleteCompany = (id) => {
@@ -393,6 +484,25 @@ function App() {
         totalOutstandingDue: Number((normalizedCompany.dueAmount + Math.max(0, totalAmount - amountPaid)).toFixed(2))
       };
       const rebuilt = summarizeCompanyBalances([...(normalizedCompany.transactionHistory || []), purchaseTx]);
+
+      const role = currentRoleRef.current || 'Staff';
+      const medicineNames = Array.isArray(summary?.products)
+        ? summary.products.map(p => p.name).join(', ')
+        : '-';
+      const quantity = Array.isArray(summary?.products)
+        ? summary.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+        : 0;
+
+      addCompanyHistoryRecord({
+        companyName: company.name,
+        medicineNames,
+        quantity,
+        totalAmount,
+        amountPaid,
+        remainingPayable: Number((totalAmount - amountPaid).toFixed(2)),
+        paymentStatus: amountPaid >= totalAmount ? 'Paid' : 'Due',
+        addedBy: role,
+      }, role);
 
       return {
         ...normalizedCompany,
@@ -427,6 +537,18 @@ function App() {
 
       const rebuilt = summarizeCompanyBalances([...(normalizedCompany.transactionHistory || []), paymentTx]);
 
+      const role = currentRoleRef.current || 'Staff';
+      addCompanyHistoryRecord({
+        companyName: company.name,
+        medicineNames: '-',
+        quantity: 0,
+        totalAmount: 0,
+        amountPaid: paymentAmount,
+        remainingPayable: nextDue,
+        paymentStatus: nextDue <= 0 ? 'Paid' : 'Partial',
+        addedBy: role,
+      }, role);
+
       return {
         ...normalizedCompany,
         amountPaid: rebuilt.amountPaid,
@@ -460,6 +582,27 @@ function App() {
         };
       });
       const rebuilt = summarizeCompanyBalances(nextHistory);
+
+      const role = currentRoleRef.current || 'Staff';
+      const medicineNames = Array.isArray(updated?.products)
+        ? updated.products.map(p => p.name).join(', ')
+        : '-';
+      const quantity = Array.isArray(updated?.products)
+        ? updated.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+        : 0;
+      const totalAmount = Number(updated?.totalAmount || 0);
+      const amountPaid = Number(updated?.amountPaid || 0);
+
+      addCompanyHistoryRecord({
+        companyName: company.name,
+        medicineNames,
+        quantity,
+        totalAmount,
+        amountPaid,
+        remainingPayable: Number((totalAmount - amountPaid).toFixed(2)),
+        paymentStatus: amountPaid >= totalAmount ? 'Paid' : 'Due',
+        addedBy: role,
+      }, role);
 
       return {
         ...normalizedCompany,

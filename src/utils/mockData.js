@@ -1,4 +1,5 @@
 export const initialMedicines = [
+
   {
     id: "MED-001",
     name: "Napa Extend",
@@ -8,8 +9,21 @@ export const initialMedicines = [
     cost: 2.30,
     stock: 12, // Low stock alert (under 15)
     expiryDate: "2027-08-15",
-    location: "Rack A-1",
-    description: "For pain relief and fever"
+    location: "North Rack 1",
+    description: "For pain relief and fever",
+    batches: [
+      {
+        id: "BATCH-MED-001",
+        quantity: 12,
+        expiryDate: "2027-08-15",
+        purchaseCost: 2.30,
+        sellingPrice: 3.00,
+        location: "North Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-002",
@@ -20,8 +34,21 @@ export const initialMedicines = [
     cost: 5.50,
     stock: 120,
     expiryDate: "2026-08-20", // Expiring soon (about 1 month if today is July 2026)
-    location: "Rack B-2",
-    description: "Proton pump inhibitor for acidity"
+    location: "South Rack 2",
+    description: "Proton pump inhibitor for acidity",
+    batches: [
+      {
+        id: "BATCH-MED-002",
+        quantity: 120,
+        expiryDate: "2026-08-20",
+        purchaseCost: 5.50,
+        sellingPrice: 7.00,
+        location: "South Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-003",
@@ -32,8 +59,21 @@ export const initialMedicines = [
     cost: 8.00,
     stock: 8, // Low stock
     expiryDate: "2027-01-10",
-    location: "Rack A-3",
-    description: "Antihistamine for allergies"
+    location: "North Rack 3",
+    description: "Antihistamine for allergies",
+    batches: [
+      {
+        id: "BATCH-MED-003",
+        quantity: 8,
+        expiryDate: "2027-01-10",
+        purchaseCost: 8.00,
+        sellingPrice: 10.00,
+        location: "North Rack 3",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-004",
@@ -44,8 +84,21 @@ export const initialMedicines = [
     cost: 70.00,
     stock: 25,
     expiryDate: "2026-08-10", // Expiring soon
-    location: "Rack C-1",
-    description: "Cough suppressant syrup"
+    location: "East Rack 1",
+    description: "Cough suppressant syrup",
+    batches: [
+      {
+        id: "BATCH-MED-004",
+        quantity: 25,
+        expiryDate: "2026-08-10",
+        purchaseCost: 70.00,
+        sellingPrice: 85.00,
+        location: "East Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-005",
@@ -56,8 +109,21 @@ export const initialMedicines = [
     cost: 6.80,
     stock: 5, // Low stock
     expiryDate: "2028-03-30",
-    location: "Rack D-1",
-    description: "Broad-spectrum antibiotic"
+    location: "West Rack 1",
+    description: "Broad-spectrum antibiotic",
+    batches: [
+      {
+        id: "BATCH-MED-005",
+        quantity: 5,
+        expiryDate: "2028-03-30",
+        purchaseCost: 6.80,
+        sellingPrice: 8.50,
+        location: "West Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-006",
@@ -68,8 +134,21 @@ export const initialMedicines = [
     cost: 2.70,
     stock: 200,
     expiryDate: "2027-12-05",
-    location: "Rack A-2",
-    description: "Antiallergic tablet"
+    location: "North Rack 2",
+    description: "Antiallergic tablet",
+    batches: [
+      {
+        id: "BATCH-MED-006",
+        quantity: 200,
+        expiryDate: "2027-12-05",
+        purchaseCost: 2.70,
+        sellingPrice: 3.50,
+        location: "North Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-007",
@@ -80,8 +159,21 @@ export const initialMedicines = [
     cost: 6.20,
     stock: 90,
     expiryDate: "2026-07-28", // Urgent: Expiring in less than a month!
-    location: "Rack B-1",
-    description: "Anti-ulcerant for heartburn"
+    location: "South Rack 1",
+    description: "Anti-ulcerant for heartburn",
+    batches: [
+      {
+        id: "BATCH-MED-007",
+        quantity: 90,
+        expiryDate: "2026-07-28",
+        purchaseCost: 6.20,
+        sellingPrice: 8.00,
+        location: "South Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-008",
@@ -92,8 +184,21 @@ export const initialMedicines = [
     cost: 3.50,
     stock: 45,
     expiryDate: "2027-05-18",
-    location: "Rack D-2",
-    description: "Antiprotozoal and antibacterial"
+    location: "West Rack 2",
+    description: "Antiprotozoal and antibacterial",
+    batches: [
+      {
+        id: "BATCH-MED-008",
+        quantity: 45,
+        expiryDate: "2027-05-18",
+        purchaseCost: 3.50,
+        sellingPrice: 4.50,
+        location: "West Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-009",
@@ -104,8 +209,21 @@ export const initialMedicines = [
     cost: 1.80,
     stock: 350,
     expiryDate: "2027-10-22",
-    location: "Rack E-1",
-    description: "Chewable vitamin C supplement"
+    location: "North Rack 1",
+    description: "Chewable vitamin C supplement",
+    batches: [
+      {
+        id: "BATCH-MED-009",
+        quantity: 350,
+        expiryDate: "2027-10-22",
+        purchaseCost: 1.80,
+        sellingPrice: 2.50,
+        location: "North Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-010",
@@ -116,8 +234,21 @@ export const initialMedicines = [
     cost: 370.00,
     stock: 18,
     expiryDate: "2027-02-14",
-    location: "Fridge",
-    description: "Insulin suspension for diabetes management"
+    location: "North Rack 1",
+    description: "Insulin suspension for diabetes management",
+    batches: [
+      {
+        id: "BATCH-MED-010",
+        quantity: 18,
+        expiryDate: "2027-02-14",
+        purchaseCost: 370.00,
+        sellingPrice: 420.00,
+        location: "North Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-011",
@@ -128,8 +259,21 @@ export const initialMedicines = [
     cost: 7.20,
     stock: 60,
     expiryDate: "2027-06-18",
-    location: "Rack B-3",
-    description: "Acid reflux and ulcer relief"
+    location: "South Rack 3",
+    description: "Acid reflux and ulcer relief",
+    batches: [
+      {
+        id: "BATCH-MED-011",
+        quantity: 60,
+        expiryDate: "2027-06-18",
+        purchaseCost: 7.20,
+        sellingPrice: 9.50,
+        location: "South Rack 3",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-012",
@@ -140,8 +284,21 @@ export const initialMedicines = [
     cost: 21.00,
     stock: 22,
     expiryDate: "2026-12-30",
-    location: "Rack D-3",
-    description: "Antibiotic for bacterial infections"
+    location: "West Rack 3",
+    description: "Antibiotic for bacterial infections",
+    batches: [
+      {
+        id: "BATCH-MED-012",
+        quantity: 22,
+        expiryDate: "2026-12-30",
+        purchaseCost: 21.00,
+        sellingPrice: 28.00,
+        location: "West Rack 3",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-013",
@@ -152,8 +309,21 @@ export const initialMedicines = [
     cost: 9.00,
     stock: 74,
     expiryDate: "2027-11-02",
-    location: "Rack B-4",
-    description: "Gastric acid reducer"
+    location: "South Rack 4",
+    description: "Gastric acid reducer",
+    batches: [
+      {
+        id: "BATCH-MED-013",
+        quantity: 74,
+        expiryDate: "2027-11-02",
+        purchaseCost: 9.00,
+        sellingPrice: 12.00,
+        location: "South Rack 4",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-014",
@@ -164,8 +334,21 @@ export const initialMedicines = [
     cost: 5.10,
     stock: 140,
     expiryDate: "2028-01-20",
-    location: "Rack A-4",
-    description: "Anti-allergy and asthma support"
+    location: "North Rack 4",
+    description: "Anti-allergy and asthma support",
+    batches: [
+      {
+        id: "BATCH-MED-014",
+        quantity: 140,
+        expiryDate: "2028-01-20",
+        purchaseCost: 5.10,
+        sellingPrice: 6.50,
+        location: "North Rack 4",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-016",
@@ -176,8 +359,21 @@ export const initialMedicines = [
     cost: 3.80,
     stock: 55,
     expiryDate: "2026-05-20",
-    location: "Rack A-5",
-    description: "Pain relief and anti-inflammatory"
+    location: "North Rack 5",
+    description: "Pain relief and anti-inflammatory",
+    batches: [
+      {
+        id: "BATCH-MED-016",
+        quantity: 55,
+        expiryDate: "2026-05-20",
+        purchaseCost: 3.80,
+        sellingPrice: 5.00,
+        location: "North Rack 5",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-017",
@@ -188,8 +384,21 @@ export const initialMedicines = [
     cost: 11.50,
     stock: 20,
     expiryDate: "2026-06-30",
-    location: "Rack F-1",
-    description: "Anticonvulsant and anxiolytic"
+    location: "South Rack 1",
+    description: "Anticonvulsant and anxiolytic",
+    batches: [
+      {
+        id: "BATCH-MED-017",
+        quantity: 20,
+        expiryDate: "2026-06-30",
+        purchaseCost: 11.50,
+        sellingPrice: 15.00,
+        location: "South Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-018",
@@ -200,8 +409,21 @@ export const initialMedicines = [
     cost: 14.00,
     stock: 0,
     expiryDate: "2026-07-18",
-    location: "Rack F-2",
-    description: "Anti-anginal tablet - EXPIRED"
+    location: "South Rack 2",
+    description: "Anti-anginal tablet - EXPIRED",
+    batches: [
+      {
+        id: "BATCH-MED-018",
+        quantity: 0,
+        expiryDate: "2026-07-18",
+        purchaseCost: 14.00,
+        sellingPrice: 18.00,
+        location: "South Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-019",
@@ -212,8 +434,21 @@ export const initialMedicines = [
     cost: 17.50,
     stock: 40,
     expiryDate: "2026-05-15",
-    location: "Rack D-5",
-    description: "Antibiotic for infections"
+    location: "West Rack 5",
+    description: "Antibiotic for infections",
+    batches: [
+      {
+        id: "BATCH-MED-019",
+        quantity: 40,
+        expiryDate: "2026-05-15",
+        purchaseCost: 17.50,
+        sellingPrice: 22.00,
+        location: "West Rack 5",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-020",
@@ -224,8 +459,21 @@ export const initialMedicines = [
     cost: 28.00,
     stock: 30,
     expiryDate: "2026-04-20",
-    location: "Rack G-1",
-    description: "Antiplatelet for heart patients"
+    location: "East Rack 1",
+    description: "Antiplatelet for heart patients",
+    batches: [
+      {
+        id: "BATCH-MED-020",
+        quantity: 30,
+        expiryDate: "2026-04-20",
+        purchaseCost: 28.00,
+        sellingPrice: 35.00,
+        location: "East Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-021",
@@ -236,8 +484,21 @@ export const initialMedicines = [
     cost: 9.50,
     stock: 65,
     expiryDate: "2026-08-01",
-    location: "Rack B-5",
-    description: "Acidity and gastric relief"
+    location: "South Rack 5",
+    description: "Acidity and gastric relief",
+    batches: [
+      {
+        id: "BATCH-MED-021",
+        quantity: 65,
+        expiryDate: "2026-08-01",
+        purchaseCost: 9.50,
+        sellingPrice: 12.00,
+        location: "South Rack 5",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-022",
@@ -248,8 +509,21 @@ export const initialMedicines = [
     cost: 36.00,
     stock: 18,
     expiryDate: "2026-07-25",
-    location: "Rack H-1",
-    description: "Anti-TB antibiotic - expiring very soon"
+    location: "West Rack 1",
+    description: "Anti-TB antibiotic - expiring very soon",
+    batches: [
+      {
+        id: "BATCH-MED-022",
+        quantity: 18,
+        expiryDate: "2026-07-25",
+        purchaseCost: 36.00,
+        sellingPrice: 45.00,
+        location: "West Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-023",
@@ -260,8 +534,21 @@ export const initialMedicines = [
     cost: 15.50,
     stock: 48,
     expiryDate: "2026-09-15",
-    location: "Rack A-6",
-    description: "Pain relief for arthritis"
+    location: "North Rack 6",
+    description: "Pain relief for arthritis",
+    batches: [
+      {
+        id: "BATCH-MED-023",
+        quantity: 48,
+        expiryDate: "2026-09-15",
+        purchaseCost: 15.50,
+        sellingPrice: 20.00,
+        location: "North Rack 6",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-024",
@@ -272,8 +559,21 @@ export const initialMedicines = [
     cost: 12.50,
     stock: 35,
     expiryDate: "2026-10-01",
-    location: "Rack G-2",
-    description: "Beta-blocker for blood pressure"
+    location: "East Rack 2",
+    description: "Beta-blocker for blood pressure",
+    batches: [
+      {
+        id: "BATCH-MED-024",
+        quantity: 35,
+        expiryDate: "2026-10-01",
+        purchaseCost: 12.50,
+        sellingPrice: 16.00,
+        location: "East Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-025",
@@ -284,8 +584,21 @@ export const initialMedicines = [
     cost: 6.20,
     stock: 90,
     expiryDate: "2026-08-10",
-    location: "Rack A-7",
-    description: "Pain reliever and fever reducer"
+    location: "North Rack 7",
+    description: "Pain reliever and fever reducer",
+    batches: [
+      {
+        id: "BATCH-MED-025",
+        quantity: 90,
+        expiryDate: "2026-08-10",
+        purchaseCost: 6.20,
+        sellingPrice: 8.00,
+        location: "North Rack 7",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-026",
@@ -296,8 +609,21 @@ export const initialMedicines = [
     cost: 19.50,
     stock: 60,
     expiryDate: "2027-03-15",
-    location: "Rack D-6",
-    description: "Broad-spectrum antibiotic"
+    location: "West Rack 6",
+    description: "Broad-spectrum antibiotic",
+    batches: [
+      {
+        id: "BATCH-MED-026",
+        quantity: 60,
+        expiryDate: "2027-03-15",
+        purchaseCost: 19.50,
+        sellingPrice: 25.00,
+        location: "West Rack 6",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-027",
@@ -308,8 +634,21 @@ export const initialMedicines = [
     cost: 4.50,
     stock: 120,
     expiryDate: "2027-06-20",
-    location: "Rack E-2",
-    description: "Expectorant for cough"
+    location: "North Rack 2",
+    description: "Expectorant for cough",
+    batches: [
+      {
+        id: "BATCH-MED-027",
+        quantity: 120,
+        expiryDate: "2027-06-20",
+        purchaseCost: 4.50,
+        sellingPrice: 6.00,
+        location: "North Rack 2",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-028",
@@ -320,8 +659,21 @@ export const initialMedicines = [
     cost: 23.00,
     stock: 45,
     expiryDate: "2027-04-10",
-    location: "Rack D-7",
-    description: "Antibiotic and antiprotozoal"
+    location: "West Rack 7",
+    description: "Antibiotic and antiprotozoal",
+    batches: [
+      {
+        id: "BATCH-MED-028",
+        quantity: 45,
+        expiryDate: "2027-04-10",
+        purchaseCost: 23.00,
+        sellingPrice: 30.00,
+        location: "West Rack 7",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-029",
@@ -332,8 +684,21 @@ export const initialMedicines = [
     cost: 21.00,
     stock: 75,
     expiryDate: "2027-07-01",
-    location: "Rack G-3",
-    description: "Angiotensin receptor blocker for BP"
+    location: "East Rack 3",
+    description: "Angiotensin receptor blocker for BP",
+    batches: [
+      {
+        id: "BATCH-MED-029",
+        quantity: 75,
+        expiryDate: "2027-07-01",
+        purchaseCost: 21.00,
+        sellingPrice: 28.00,
+        location: "East Rack 3",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   },
   {
     id: "MED-031",
@@ -344,12 +709,26 @@ export const initialMedicines = [
     cost: 7.50,
     stock: 50,
     expiryDate: "2026-07-19",
-    location: "Rack Z-1",
-    description: "Dummy medicine for auto-expiry testing"
+    location: "North Rack 1",
+    description: "Dummy medicine for auto-expiry testing",
+    batches: [
+      {
+        id: "BATCH-MED-031",
+        quantity: 50,
+        expiryDate: "2026-07-19",
+        purchaseCost: 7.50,
+        sellingPrice: 10.00,
+        location: "North Rack 1",
+        stockInDate: "2026-07-01T10:00:00.000Z",
+        notes: "Initial stock"
+      },
+    ],
+    animalType: 'Other',
   }
+
 ];
 
-export const initialCompanies = [
+export const initialCompanies = [,
   {
     id: "COMP-001",
     name: "Beximco Pharmaceuticals",
@@ -689,7 +1068,7 @@ export const initialCompanies = [
   }
 ];
 
-export const initialCustomers = [
+export const initialCustomers = [,
   {
     id: "CUST-001",
     name: "Rahim Mia",
@@ -1105,7 +1484,7 @@ export const initialCustomers = [
   }
 ];
 
-export const initialTransactions = [
+export const initialTransactions = [,
   {
     id: "TX-1001",
     timestamp: "2026-07-08T10:15:30Z",
@@ -1119,7 +1498,8 @@ export const initialTransactions = [
     tax: 6.15,
     total: 129.15,
     cashReceived: 150.00,
-    changeGiven: 20.85
+    changeGiven: 20.85,
+    animalType: 'Other',
   },
   {
     id: "TX-1002",
@@ -1135,7 +1515,8 @@ export const initialTransactions = [
     tax: 29.50,
     total: 619.50,
     cashReceived: 620.00,
-    changeGiven: 0.50
+    changeGiven: 0.50,
+    animalType: 'Other',
   },
   {
     id: "TX-1003",
@@ -1149,7 +1530,8 @@ export const initialTransactions = [
     tax: 2.50,
     total: 52.50,
     cashReceived: 100.00,
-    changeGiven: 47.50
+    changeGiven: 47.50,
+    animalType: 'Other',
   },
   {
     id: "TX-1004",
@@ -1164,7 +1546,8 @@ export const initialTransactions = [
     tax: 10.70,
     total: 224.70,
     cashReceived: 250.00,
-    changeGiven: 25.30
+    changeGiven: 25.30,
+    animalType: 'Other',
   },
   {
     id: "TX-1005",
@@ -1179,7 +1562,8 @@ export const initialTransactions = [
     tax: 4.38,
     total: 91.88,
     cashReceived: 100.00,
-    changeGiven: 8.12
+    changeGiven: 8.12,
+    animalType: 'Other',
   },
   {
     id: "TX-1006",
@@ -1194,7 +1578,8 @@ export const initialTransactions = [
     tax: 10.40,
     total: 218.40,
     cashReceived: 250.00,
-    changeGiven: 31.60
+    changeGiven: 31.60,
+    animalType: 'Other',
   },
   {
     id: "TX-1008",
@@ -1209,7 +1594,8 @@ export const initialTransactions = [
     tax: 31.50,
     total: 661.50,
     cashReceived: 700.00,
-    changeGiven: 38.50
+    changeGiven: 38.50,
+    animalType: 'Other',
   },
   {
     id: "TX-1009",
@@ -1224,7 +1610,8 @@ export const initialTransactions = [
     tax: 23.50,
     total: 493.50,
     cashReceived: 500.00,
-    changeGiven: 6.50
+    changeGiven: 6.50,
+    animalType: 'Other',
   },
   {
     id: "TX-1010",
@@ -1239,7 +1626,8 @@ export const initialTransactions = [
     tax: 42.50,
     total: 892.50,
     cashReceived: 900.00,
-    changeGiven: 7.50
+    changeGiven: 7.50,
+    animalType: 'Other',
   },
   {
     id: "TX-1011",
@@ -1254,7 +1642,8 @@ export const initialTransactions = [
     tax: 29.25,
     total: 614.25,
     cashReceived: 620.00,
-    changeGiven: 5.75
+    changeGiven: 5.75,
+    animalType: 'Other',
   },
   {
     id: "TX-1012",
@@ -1270,8 +1659,9 @@ export const initialTransactions = [
     tax: 26.35,
     total: 553.35,
     cashReceived: 560.00,
-    changeGiven: 6.65
-  }
+    changeGiven: 6.65,
+    animalType: 'Other',
+  },
 ];
 
 export const initialFinancialReports = [

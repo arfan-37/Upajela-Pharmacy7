@@ -1,0 +1,113 @@
+.history-header {
+  margin-bottom: 24px;
+}
+
+.history-header h2 {
+  font-size: 26px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.history-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Tabs */
+.history-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.history-tab {
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.history-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.history-tab.active {
+  background: var(--accent);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+/* Filters */
+.history-filters {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.history-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .history-filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Content */
+.history-content {
+  min-height: 200px;
+}
+
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.history-empty span {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.history-empty p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Table */
+.history-table {
+  min-width: 1200px;
+}
+
+.history-table thead th {
+  padding: 14px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+}
+
+.history-table tbody td {
+  padding: 12px 10px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
