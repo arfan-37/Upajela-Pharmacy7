@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import './CustomerPanel.css';
-import { rebuildCustomerHistoryTimeline } from '../utils/customerHistory';
+import { rebuildCustomerHistoryTimeline, getOldestOutstandingDueDate } from '../utils/customerHistory';
 import ConfirmDialog from './ConfirmDialog';
 
 export default function CustomerPanel({ customers, shopBalance, onAddCustomer, onUpdateCustomer, onDeleteCustomer, onReceivePayment, currentRole, t }) {
@@ -62,36 +62,14 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
   };
 
   // Classify a customer by how long their due has been outstanding.
-  // Uses the latest payment date as the start of the current due cycle,
-  // so a payment (full or partial) restarts the clock.
+  // Uses the oldest outstanding (unpaid) due creation date so that
+  // newly created dues do not immediately appear in the 15/30-day panels.
   const getDueBucket = (customer) => {
     const dueAmount = Number(customer.dueAmount ?? customer.totalDue ?? 0);
     if (dueAmount <= 0) return 'none';
 
-    // Latest payment date from paymentHistory
-    const paymentDates = (customer.paymentHistory || [])
-      .filter((entry) => entry.type === 'payment' && entry.paymentDate)
-      .map((entry) => new Date(entry.paymentDate).getTime())
-      .filter((d) => !Number.isNaN(d));
-
-    // Also consider duePaymentDate on sale entries (set when a payment is applied)
-    const salePaymentDates = (customer.paymentHistory || [])
-      .filter((entry) => entry.type === 'sale' && entry.duePaymentDate)
-      .map((entry) => new Date(entry.duePaymentDate).getTime())
-      .filter((d) => !Number.isNaN(d));
-
-    const allDates = [...paymentDates, ...salePaymentDates];
-    const latestPayment = allDates.length > 0 ? Math.max(...allDates) : null;
-
-    // Fallback: use the most recent sale date if no payments were ever made
-    const saleDates = (customer.paymentHistory || [])
-      .filter((entry) => entry.type === 'sale' && entry.purchaseDate)
-      .map((entry) => new Date(entry.purchaseDate).getTime())
-      .filter((d) => !Number.isNaN(d));
-
-    const referenceDate = latestPayment || (saleDates.length > 0 ? Math.max(...saleDates) : null);
-
-    if (!referenceDate) {
+    const referenceDateStr = getOldestOutstandingDueDate(customer.paymentHistory || []);
+    if (!referenceDateStr) {
       const createdAt = customer.createdAt ? new Date(customer.createdAt).getTime() : NaN;
       if (Number.isNaN(createdAt)) return '15';
       const daysOld = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
@@ -100,6 +78,8 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
       return 'none';
     }
 
+    const referenceDate = new Date(referenceDateStr).getTime();
+    if (Number.isNaN(referenceDate)) return '15';
     const daysOld = (Date.now() - referenceDate) / (1000 * 60 * 60 * 24);
     if (daysOld >= 30) return '30';
     if (daysOld >= 15) return '15';

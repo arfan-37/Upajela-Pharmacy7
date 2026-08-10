@@ -4,6 +4,29 @@ const getHistoryTimestamp = (entry) => {
 
 const toAmount = (value) => Number(value || 0);
 
+export const getOldestOutstandingDueDate = (history = []) => {
+  const timeline = rebuildCustomerHistoryTimeline(history);
+  const pendingDues = [];
+
+  for (const entry of timeline) {
+    if (entry.type === 'sale' && entry.dueCreated > 0) {
+      pendingDues.push({ date: entry.purchaseDate || entry.createdAt, amount: entry.dueCreated });
+    } else if (entry.type === 'payment') {
+      let remaining = entry.paymentAmount;
+      while (remaining > 0 && pendingDues.length > 0 && pendingDues[0].amount <= remaining) {
+        remaining = Number((remaining - pendingDues[0].amount).toFixed(2));
+        pendingDues.shift();
+      }
+      if (remaining > 0 && pendingDues.length > 0) {
+        pendingDues[0].amount = Number((pendingDues[0].amount - remaining).toFixed(2));
+      }
+    }
+  }
+
+  if (pendingDues.length === 0) return null;
+  return pendingDues[0].date;
+};
+
 export const summarizeCustomerBalances = (history = []) => {
   const orderedHistory = rebuildCustomerHistoryTimeline(history);
   let cashPaid = 0;
@@ -43,9 +66,10 @@ export const rebuildCustomerHistoryTimeline = (history = []) => {
     if (entry.type === 'sale') {
       const totalPurchaseAmount = toAmount(entry.totalPurchaseAmount ?? entry.totalBill ?? entry.totalAmount);
       const cashPaid = toAmount(entry.cashPaid ?? entry.cashAmount ?? entry.amountReceived);
-      const dueCreated = toAmount(
-        entry.dueCreated ?? entry.dueAmount ?? entry.remainingDue ?? Math.max(0, totalPurchaseAmount - cashPaid)
-      );
+      const calculatedDue = Number(Math.max(0, totalPurchaseAmount - cashPaid).toFixed(2));
+      const dueCreated = Number.isFinite(calculatedDue) && calculatedDue >= 0
+        ? calculatedDue
+        : toAmount(entry.dueCreated ?? entry.dueAmount ?? entry.remainingDue ?? 0);
 
       runningDue = Number((runningDue + dueCreated).toFixed(2));
 

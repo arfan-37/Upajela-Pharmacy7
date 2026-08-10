@@ -70,15 +70,15 @@
 
 /* Due-age row highlights */
 .row-warning td {
-  background-color: rgba(245, 158, 11, 0.10);
+  background-color: rgba(245, 158, 11, 0.06);
 }
 
 .row-warning td strong {
-  color: var(--warning);
+  color: #b45309;
 }
 
 .row-danger td {
-  background-color: rgba(225, 29, 72, 0.12);
+  background-color: rgba(220, 38, 38, 0.05);
 }
 
 .row-danger td strong {
@@ -124,7 +124,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.04);
+  background: var(--bg-card);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.85rem;

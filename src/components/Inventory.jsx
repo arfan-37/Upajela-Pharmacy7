@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import './Inventory.css';
-import { addDaysToDateOnly, formatDateOnly, normalizeDate } from '../utils/dateUtils';
+import { formatDateOnly, normalizeDate } from '../utils/dateUtils';
 import ConfirmDialog from './ConfirmDialog';
 import { addInventoryHistoryRecord } from '../utils/historyUtils';
 import { addMedicineHistoryRecord, getMedicineHistory } from '../utils/medicineHistoryUtils';
+import { appendMedicineBatch, formatBatchLabel, getBatchExpiryStatus, getMedicineBatchesWithStatus, getMedicineExpirySummary, getMedicineTotalStock, getNextBatchNumber, normalizeMedicineRecord } from '../utils/inventoryBatchUtils';
 import { getLocalizedRackLocations } from '../utils/rackLocations';
 import { VET_CATEGORIES, ANIMAL_TYPES } from '../utils/vetOptions';
 
 export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, onDeleteMedicine, currentRole, alertFilter, setAlertFilter, language, t }) {
   const TODAY = formatDateOnly();
-  const THREE_MONTHS_LATER = addDaysToDateOnly(TODAY, 90);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,8 +29,9 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
 
   // Medicine history modal state
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMedicineId, setHistoryMedicineId] = useState(null);
   const [historyRecords, setHistoryRecords] = useState([]);
+  const [historyView, setHistoryView] = useState('batches');
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
   
   // Form State
   const [formName, setFormName] = useState('');
@@ -46,42 +47,48 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   const [formRestockQty, setFormRestockQty] = useState('');
   const [formRestockNotes, setFormRestockNotes] = useState('');
 
+  const EXPIRY_WARNING_DAYS = 30;
   const getMedicineEffectiveExpiry = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) return normalizeDate(med.expiryDate);
-    return batches.reduce((earliest, batch) => {
-      const d = normalizeDate(batch.expiryDate);
-      return (!earliest || d < earliest) ? d : earliest;
-    }, null);
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).displayExpiry || normalizeDate(med.expiryDate);
   };
 
   const isMedicineFullyExpired = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) return normalizeDate(med.expiryDate) <= TODAY;
-    return batches.every(batch => normalizeDate(batch.expiryDate) <= TODAY);
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).isFullyExpired;
+  };
+
+  const isMedicineHasExpiredBatch = (med) => {
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).hasExpiredBatches;
   };
 
   const isMedicineExpiringSoon = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) {
-      const d = normalizeDate(med.expiryDate);
-      return d > TODAY && d <= THREE_MONTHS_LATER;
-    }
-    const hasExpired = batches.some(batch => normalizeDate(batch.expiryDate) <= TODAY);
-    if (hasExpired) return false;
-    return batches.some(batch => {
-      const d = normalizeDate(batch.expiryDate);
-      return d > TODAY && d <= THREE_MONTHS_LATER;
-    });
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).hasExpiringBatches;
+  };
+
+  const formatBatchDate = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  };
+
+  const formatHistoryBatchLabel = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '-';
+    const directMatch = raw.match(/Batch\s+\d+/i);
+    if (directMatch) return directMatch[0];
+    return '-';
   };
 
   // Extract unique categories and animal types for filter
   const categories = ['All', ...VET_CATEGORIES];
   const animalTypes = ['All', ...new Set(medicines.map(m => m.animalType).filter(Boolean))];
 
-  const expiredCount = medicines.filter(m => isMedicineFullyExpired(m)).length;
+  const expiredCount = medicines.filter(m => isMedicineHasExpiredBatch(m)).length;
   const expiringCount = medicines.filter(m => isMedicineExpiringSoon(m)).length;
-  const lowStockCount = medicines.filter(m => m.stock < 15).length;
+  const lowStockCount = medicines.filter(m => getMedicineTotalStock(m) < 15).length;
+  const selectedMedicineBatches = getMedicineBatchesWithStatus(selectedMedicine || {}).map((batch) => {
+    const expiryStatus = getBatchExpiryStatus(batch, TODAY, EXPIRY_WARNING_DAYS);
+    return { ...batch, expiryStatus };
+  });
 
   // Filtering Logic
   const filteredMedicines = medicines.filter(m => {
@@ -93,14 +100,15 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
     const matchesAnimalType = animalTypeFilter === 'All' || m.animalType === animalTypeFilter;
     
     const isExpired = isMedicineFullyExpired(m);
+    const hasExpiredBatch = isMedicineHasExpiredBatch(m);
     const isExpiringSoon = isMedicineExpiringSoon(m);
     let matchesAlert = true;
     if (alertFilter === 'Low Stock') {
-      matchesAlert = m.stock < 15;
+      matchesAlert = getMedicineTotalStock(m) < 15;
     } else if (alertFilter === 'Expiring/Expired') {
-      matchesAlert = isExpiringSoon || isExpired;
+      matchesAlert = isExpiringSoon && !isExpired;
     } else if (alertFilter === 'Expired') {
-      matchesAlert = isExpired;
+      matchesAlert = hasExpiredBatch;
     }
 
     return matchesSearch && matchesCategory && matchesAnimalType && matchesAlert;
@@ -129,16 +137,17 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
     setModalMode('edit');
     setEditingId(med.id);
     setRestockMedicine(null);
-    setFormName(med.name);
-    setFormGeneric(med.genericName);
-    setFormCategory(med.category);
-    setFormAnimalType(med.animalType || 'Other');
-    setFormPrice(med.price);
-    setFormCost(med.cost);
-    setFormStock(med.stock);
-    setFormExpiry(med.expiryDate);
-    setFormLocation(med.location);
-    setFormDesc(med.description || '');
+    const normalizedMed = normalizeMedicineRecord(med);
+    setFormName(normalizedMed.name);
+    setFormGeneric(normalizedMed.genericName);
+    setFormCategory(normalizedMed.category);
+    setFormAnimalType(normalizedMed.animalType || 'Other');
+    setFormPrice(normalizedMed.price);
+    setFormCost(normalizedMed.cost);
+    setFormStock(normalizedMed.stock);
+    setFormExpiry(normalizedMed.expiryDate);
+    setFormLocation(normalizedMed.location);
+    setFormDesc(normalizedMed.description || '');
     setFormRestockQty('');
     setFormRestockNotes('');
     setIsModalOpen(true);
@@ -147,17 +156,18 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   const openRestockModal = (med) => {
     setModalMode('restock');
     setEditingId(med.id);
-    setRestockMedicine(med);
-    setFormName(med.name);
-    setFormGeneric(med.genericName);
-    setFormCategory(med.category);
-    setFormAnimalType(med.animalType || 'Other');
-    setFormPrice(med.price);
-    setFormCost(med.cost);
+    const normalizedMed = normalizeMedicineRecord(med);
+    setRestockMedicine(normalizedMed);
+    setFormName(normalizedMed.name);
+    setFormGeneric(normalizedMed.genericName);
+    setFormCategory(normalizedMed.category);
+    setFormAnimalType(normalizedMed.animalType || 'Other');
+    setFormPrice(normalizedMed.price);
+    setFormCost(normalizedMed.cost);
     setFormStock('');
     setFormExpiry('');
-    setFormLocation(med.location || '');
-    setFormDesc(med.description || '');
+    setFormLocation(normalizedMed.location || '');
+    setFormDesc(normalizedMed.description || '');
     setFormRestockQty('');
     setFormRestockNotes('');
     setIsModalOpen(true);
@@ -167,35 +177,32 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
     e.preventDefault();
 
     if (modalMode === 'restock' && restockMedicine) {
-      const existing = restockMedicine;
+      const existing = normalizeMedicineRecord(restockMedicine);
       const addedQty = parseInt(formRestockQty) || 0;
       const newStock = Number(existing.stock || 0) + addedQty;
       const newPrice = formPrice !== '' ? parseFloat(formPrice) : existing.price;
       const newCost = formCost !== '' ? parseFloat(formCost) : existing.cost;
       const newExpiry = formExpiry || existing.expiryDate;
       const newLocation = formLocation.trim() || existing.location;
+      const nextBatchNumber = getNextBatchNumber(existing);
 
       const newBatch = {
-        id: `BATCH-${Date.now()}`,
+        batchNumber: nextBatchNumber,
+        batchLabel: formatBatchLabel(nextBatchNumber),
         quantity: addedQty,
         expiryDate: newExpiry,
         purchaseCost: newCost,
         sellingPrice: newPrice,
         location: newLocation,
         stockInDate: new Date().toISOString(),
+        purchaseDate: new Date().toISOString(),
         notes: formRestockNotes.trim(),
       };
 
-      const updatedMed = {
+      const updatedMed = appendMedicineBatch({
         ...existing,
-        stock: newStock,
-        price: newPrice,
-        cost: newCost,
-        expiryDate: newExpiry,
-        location: newLocation,
         description: formDesc.trim() || existing.description,
-        batches: [...(existing.batches || []), newBatch],
-      };
+      }, newBatch);
 
       onUpdateMedicine(updatedMed);
       addInventoryHistoryRecord({
@@ -203,7 +210,8 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         companyName: '-',
         category: updatedMed.category,
         animalType: updatedMed.animalType,
-        batchNo: newBatch.id,
+        batchNo: newBatch.batchLabel,
+        batchLabel: newBatch.batchLabel,
         previousStock: Number(existing.stock || 0),
         addedQuantity: addedQty,
         newTotalStock: newStock,
@@ -230,7 +238,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         sellingPrice: newPrice,
         expiryDate: newExpiry,
         shelfLocation: newLocation,
-        batchNo: newBatch.id,
+        batchNo: newBatch.batchLabel,
         supplier: '-',
         notes: formRestockNotes.trim() || `Stock In via ${currentRole}`,
       }, currentRole);
@@ -250,7 +258,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           sellingPrice: newPrice,
           expiryDate: newExpiry,
           shelfLocation: newLocation,
-          batchNo: newBatch.id,
+          batchNo: newBatch.batchLabel,
           supplier: '-',
           notes: `Expiry date changed from ${existing.expiryDate} to ${newExpiry}`,
         }, currentRole);
@@ -278,7 +286,8 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         ...payload,
         id: `MED-${Math.floor(100 + Math.random() * 900)}`,
         batches: payload.stock > 0 ? [{
-          id: `BATCH-${Date.now()}`,
+          batchNumber: 1,
+          batchLabel: 'Batch 1',
           quantity: payload.stock,
           expiryDate: payload.expiryDate,
           purchaseCost: payload.cost,
@@ -294,7 +303,8 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         companyName: '-',
         category: newMed.category,
         animalType: newMed.animalType,
-        batchNo: newMed.batches[0]?.id || '-',
+        batchNo: newMed.batches[0]?.batchLabel || formatBatchLabel(newMed.batches[0]?.batchNumber),
+        batchLabel: newMed.batches[0]?.batchLabel || formatBatchLabel(newMed.batches[0]?.batchNumber),
         previousStock: 0,
         addedQuantity: newMed.stock,
         newTotalStock: newMed.stock,
@@ -321,16 +331,19 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         sellingPrice: newMed.price,
         expiryDate: newMed.expiryDate,
         shelfLocation: newMed.location,
-        batchNo: newMed.batches[0]?.id || '-',
+        batchNo: newMed.batches[0]?.batchLabel || formatBatchLabel(newMed.batches[0]?.batchNumber),
         supplier: '-',
         notes: `Medicine created by ${currentRole}`,
       }, currentRole);
     } else {
       const originalMed = medicines.find(m => m.id === editingId);
-      const updatedMed = {
+      const updatedMed = normalizeMedicineRecord({
+        ...originalMed,
         ...payload,
-        id: editingId
-      };
+        id: editingId,
+        batches: originalMed?.batches || [],
+        stock: getMedicineTotalStock(originalMed),
+      });
       onUpdateMedicine(updatedMed);
       addInventoryHistoryRecord({
         medicineName: updatedMed.name,
@@ -439,6 +452,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
           expiryDate: med.expiryDate,
           shelfLocation: med.location,
           batchNo: '-',
+          batchLabel: '-',
           supplier: '-',
           notes: 'Medicine deleted from inventory',
         }, currentRole);
@@ -455,8 +469,9 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
   };
 
   const openHistoryModal = (med) => {
-    setHistoryMedicineId(med.id);
+    setSelectedMedicine(normalizeMedicineRecord(med));
     setHistoryRecords(getMedicineHistory(med.id));
+    setHistoryView('batches');
     setIsHistoryOpen(true);
   };
 
@@ -559,13 +574,14 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
             </thead>
             <tbody>
               {filteredMedicines.map(m => {
-                const isLowStock = m.stock < 15;
-                const isExpired = isMedicineFullyExpired(m);
+                const totalStock = getMedicineTotalStock(m);
+                const isLowStock = totalStock < 15;
+                const hasExpiredBatch = isMedicineHasExpiredBatch(m);
                 const isExpiringSoon = isMedicineExpiringSoon(m);
                 const effectiveExpiry = getMedicineEffectiveExpiry(m);
 
                 let rowClass = "";
-                if (isExpired) rowClass = "row-expired";
+                if (hasExpiredBatch) rowClass = "row-expired";
                 else if (isExpiringSoon) rowClass = "row-expiring-soon";
                 else if (isLowStock) rowClass = "row-low-stock";
 
@@ -575,8 +591,8 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                     <td>
                       <div className="med-title-cell">
                         <strong>{m.name}</strong>
-                        {isExpired && <span className="cell-badge badge-danger">Expired</span>}
-                        {!isExpired && isExpiringSoon && <span className="cell-badge badge-warning">Soon</span>}
+                        {hasExpiredBatch && <span className="cell-badge badge-danger">Expired</span>}
+                        {!hasExpiredBatch && isExpiringSoon && <span className="cell-badge badge-warning">Soon</span>}
                       </div>
                     </td>
                     <td className="generic-cell">{m.genericName}</td>
@@ -584,14 +600,14 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                     <td><span className="badge badge-info">{m.animalType || 'Other'}</span></td>
                     <td>
                       <span className={`stock-cell ${isLowStock ? 'stock-warning' : ''}`}>
-                        {m.stock} {isLowStock && '⚠️'}
+                        {totalStock} {isLowStock && '⚠️'}
                       </span>
                     </td>
                     <td>৳ {m.price.toFixed(2)}</td>
                     <td>৳ {m.cost.toFixed(2)}</td>
                     <td>{m.location}</td>
                     <td>
-                      <span className={isExpired ? 'text-danger' : isExpiringSoon ? 'text-warning' : ''}>
+                      <span className={hasExpiredBatch ? 'text-danger' : isExpiringSoon ? 'text-warning' : ''}>
                         {effectiveExpiry}
                       </span>
                     </td>
@@ -607,9 +623,9 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                         <button 
                           className="btn btn-secondary btn-sm"
                           onClick={() => openHistoryModal(m)}
-                          title="Medicine History"
+                          title="View Batches/History"
                         >
-                          📜
+                          📚
                         </button>
                         <button 
                           className="btn btn-secondary btn-sm edit-btn"
@@ -792,6 +808,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                       className="form-control"
                       value={formStock}
                       onChange={(e) => setFormStock(e.target.value)}
+                      readOnly={modalMode === 'edit'}
                     />
                   </div>
                 )}
@@ -848,11 +865,98 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         <div className="modal-overlay" onClick={() => setIsHistoryOpen(false)}>
           <div className="glass-card modal-container" style={{ maxWidth: '900px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{t.inventory.medicineHistoryTitle || 'Medicine History'}</h3>
+              <h3>{t.inventory.batchesHistoryTitle || 'View Batches / History'}</h3>
               <button className="modal-close-btn" onClick={() => setIsHistoryOpen(false)}>×</button>
             </div>
+            <div className="inventory-history-tabs">
+              <button
+                type="button"
+                className={`inventory-history-tab ${historyView === 'batches' ? 'active' : ''}`}
+                onClick={() => setHistoryView('batches')}
+              >
+                {t.inventory.batchesTabLabel || 'Batches'}
+              </button>
+              <button
+                type="button"
+                className={`inventory-history-tab ${historyView === 'history' ? 'active' : ''}`}
+                onClick={() => setHistoryView('history')}
+              >
+                {t.inventory.historyTabLabel || 'History'}
+              </button>
+            </div>
             <div className="medicine-history-content">
-              {historyRecords.length === 0 ? (
+              {historyView === 'batches' ? (
+                <div className="batch-history-summary">
+                  <div className="batch-summary-card">
+                    <div>
+                      <strong>{selectedMedicine?.name || '-'}</strong>
+                      <p>{selectedMedicine?.genericName || '-'}</p>
+                    </div>
+                    <div>
+                      <span>{t.inventory.totalStockLabel || 'Total Stock'}</span>
+                      <strong>{getMedicineTotalStock(selectedMedicine || {})}</strong>
+                    </div>
+                  </div>
+
+                  {selectedMedicineBatches.length === 0 ? (
+                    <div className="history-empty">
+                      <span>📭</span>
+                      <p>{t.inventory.noBatchRecords || 'No batch records found for this medicine.'}</p>
+                    </div>
+                  ) : (
+                    <div className="table-wrapper">
+                      <div className="table-container">
+                        <table className="custom-table history-table batch-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '50px' }}>#</th>
+                              <th>{t.history.tableBatch || 'Batch'}</th>
+                              <th>{t.inventory.batchQtyLabel || 'Quantity'}</th>
+                              <th>{t.inventory.tableCost}</th>
+                              <th>{t.inventory.tablePrice}</th>
+                              <th>{t.inventory.tableLocation}</th>
+                              <th>{t.inventory.batchPurchaseDateLabel || 'Purchase Date'}</th>
+                              <th>{t.inventory.tableExpiry}</th>
+                              <th>{t.inventory.expiryStatusLabel || 'Expiry Status'}</th>
+                              <th>{t.inventory.batchStatusLabel || 'Status'}</th>
+                              <th>{t.common.notes || 'Notes'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedMedicineBatches.map((batch, idx) => (
+                              <tr key={batch.batchNumber || idx} className={batch.sellingStatus.key === 'current' ? 'row-current-selling' : ''}>
+                                <td><strong>{idx + 1}</strong></td>
+                                <td>{batch.batchLabel || formatBatchLabel(batch.batchNumber)}</td>
+                                <td>
+                                  <span className={`badge ${batch.quantity <= 0 ? 'badge-danger' : 'badge-success'}`}>
+                                    {batch.quantity}
+                                  </span>
+                                </td>
+                                <td>৳ {Number(batch.purchaseCost || 0).toFixed(2)}</td>
+                                <td>৳ {Number(batch.sellingPrice || 0).toFixed(2)}</td>
+                                <td>{batch.location || '-'}</td>
+                                <td>{formatBatchDate(batch.purchaseDate || batch.stockInDate)}</td>
+                                <td>{batch.expiryDate || '-'}</td>
+                                <td>
+                                  <span className={`badge ${batch.expiryStatus?.key === 'expired' ? 'badge-danger' : batch.expiryStatus?.key === 'expiring-soon' ? 'badge-warning' : 'badge-success'}`}>
+                                    {batch.expiryStatus?.label || 'Active'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`badge ${batch.sellingStatus.key === 'completed' || batch.sellingStatus.key === 'expired' ? 'badge-danger' : batch.sellingStatus.key === 'current' ? 'badge-success' : 'badge-info'}`}>
+                                    {`${batch.batchLabel || formatBatchLabel(batch.batchNumber)} — Stock: ${batch.quantity} — ${batch.sellingStatus.label}`}
+                                  </span>
+                                </td>
+                                <td style={{ maxWidth: '180px', whiteSpace: 'normal' }}>{batch.notes || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : historyRecords.length === 0 ? (
                 <div className="history-empty">
                   <span>📭</span>
                   <p>{t.inventory.noHistoryRecords || 'No history records found for this medicine.'}</p>
@@ -894,7 +998,7 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
                             <td>{r.medicineName}</td>
                             <td>{r.genericName}</td>
                             <td>{r.category}</td>
-                            <td>{r.batchNo || '-'}</td>
+                            <td>{r.batchLabel || formatHistoryBatchLabel(r.batchNo)}</td>
                             <td>{r.previousStock ?? '-'}</td>
                             <td>{r.addedQuantity > 0 ? `+${r.addedQuantity}` : r.addedQuantity < 0 ? r.addedQuantity : '-'}</td>
                             <td>{r.currentStock ?? r.newTotalStock ?? '-'}</td>

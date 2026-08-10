@@ -1,11 +1,11 @@
 import React from 'react';
 
-export default function ConfirmDialog({ open, title, message, onConfirm, onCancel, t }) {
+export default function ConfirmDialog({ open, title, message, onConfirm, onCancel, t, confirmLabel, cancelLabel }) {
   if (!open) return null;
 
   const text = t?.common || {};
-  const confirmLabel = text.yes || 'Yes';
-  const cancelLabel = text.no || 'No';
+  const dialogConfirmLabel = confirmLabel || text.yes || 'Yes';
+  const dialogCancelLabel = cancelLabel || text.no || 'No';
   const dialogTitle = title || text.confirmDeleteTitle || 'Confirm Delete';
   const dialogMessage = message || text.confirmDelete || 'Are you sure you want to delete this record?';
 

@@ -1,49 +1,35 @@
 import React from 'react';
 import './Dashboard.css';
-import { addDaysToDateOnly, formatDateOnly, normalizeDate } from '../utils/dateUtils';
+import { formatDateOnly, normalizeDate } from '../utils/dateUtils';
+import { getMedicineExpirySummary, getMedicineTotalStock } from '../utils/inventoryBatchUtils';
 
 export default function Dashboard({ medicines, transactions, currentRole, setActiveTab, setInventoryFilter, t }) {
   const TODAY = formatDateOnly();
-  const THREE_MONTHS_LATER = addDaysToDateOnly(TODAY, 90);
 
+  const EXPIRY_WARNING_DAYS = 30;
   const getMedicineEffectiveExpiry = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) return normalizeDate(med.expiryDate);
-    return batches.reduce((earliest, batch) => {
-      const d = normalizeDate(batch.expiryDate);
-      return (!earliest || d < earliest) ? d : earliest;
-    }, null);
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).displayExpiry || normalizeDate(med.expiryDate);
   };
 
-  const isMedicineFullyExpired = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) return normalizeDate(med.expiryDate) <= TODAY;
-    return batches.every(batch => normalizeDate(batch.expiryDate) <= TODAY);
+  const isMedicineHasExpiredBatch = (med) => {
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).hasExpiredBatches;
   };
 
   const isMedicineExpiringSoon = (med) => {
-    const batches = Array.isArray(med.batches) ? med.batches : [];
-    if (batches.length === 0) {
-      const d = normalizeDate(med.expiryDate);
-      return d > TODAY && d <= THREE_MONTHS_LATER;
-    }
-    const hasExpired = batches.some(batch => normalizeDate(batch.expiryDate) <= TODAY);
-    if (hasExpired) return false;
-    return batches.some(batch => {
-      const d = normalizeDate(batch.expiryDate);
-      return d > TODAY && d <= THREE_MONTHS_LATER;
-    });
+    return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).hasExpiringBatches;
   };
 
-  // Calculations
-  const totalItems = medicines.length;
-  
-  const lowStockMedicines = medicines.filter(m => m.stock < 15);
-  const lowStockCount = lowStockMedicines.length;
+  const expiredMedicines = medicines.filter(m => isMedicineHasExpiredBatch(m));
+  const expiringSoonMedicines = medicines.filter(m => {
+    if (!isMedicineExpiringSoon(m)) return false;
+    return !isMedicineHasExpiredBatch(m);
+  });
+  const totalUrgentCount = expiredMedicines.length + expiringSoonMedicines.length;
 
-  const expiredMedicines = medicines.filter(m => isMedicineFullyExpired(m));
-  const expiringSoonMedicines = medicines.filter(m => isMedicineExpiringSoon(m));
-  const urgentExpiryCount = expiredMedicines.length + expiringSoonMedicines.length;
+  const totalItems = medicines.length;
+
+  const lowStockMedicines = medicines.filter(m => getMedicineTotalStock(m) < 15);
+  const lowStockCount = lowStockMedicines.length;
 
   // Sales by Category (general inventory statistics - safe for all roles)
   const categorySales = {};
@@ -66,7 +52,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
         <p className="welcome-text">{t.dashboard.intro}</p>
       </div>
 
-      {urgentExpiryCount > 0 && (
+      {totalUrgentCount > 0 && (
         <div 
           className="expiry-alert-banner" 
           onClick={() => { 
@@ -76,9 +62,9 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
           title="Click to view expiring medicines"
         >
           <div className="banner-content">
-            <span className="banner-icon">🚨</span>
+            <span className="alert-icon">🚨</span>
             <span className="banner-text">
-              <strong>{t.dashboard.expiryAlert}</strong> {t.dashboard.expiryMessage.replace('{count}', urgentExpiryCount)}
+              <strong>{t.dashboard.expiryAlert}</strong> {t.dashboard.expiryMessage.replace('{count}', totalUrgentCount)}
             </span>
           </div>
           <span className="banner-action">{t.dashboard.viewProducts}</span>
@@ -125,7 +111,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
           <div className="kpi-icon danger-icon">⏰</div>
           <div className="kpi-data">
             <span className="kpi-title">{t.dashboard.expiryWarnings}</span>
-            <h3 className="kpi-value text-danger">{urgentExpiryCount}</h3>
+            <h3 className="kpi-value text-danger">{totalUrgentCount}</h3>
             <span className="kpi-subtext">{expiredMedicines.length} expired | {expiringSoonMedicines.length} expiring soon</span>
           </div>
         </div>
@@ -269,7 +255,7 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
               </div>
             ))}
 
-            {lowStockCount === 0 && urgentExpiryCount === 0 && (
+            {lowStockCount === 0 && totalUrgentCount === 0 && (
               <div className="all-clear">
                 <span className="clear-icon">✅</span>
                 <h4>{t.dashboard.allClear}</h4>

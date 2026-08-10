@@ -1,6 +1,7 @@
 .finance-auth-container {
   max-width: 420px;
   text-align: center;
+  padding: 24px;
 }
 
 .finance-auth-locked {

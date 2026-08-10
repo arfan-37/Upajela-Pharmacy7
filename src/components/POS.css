@@ -18,6 +18,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .catalog-card, .cart-card {
@@ -25,10 +26,44 @@
   display: flex;
   flex-direction: column;
   padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
-.catalog-header, .cart-header {
+.cart-card {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cart-header {
   margin-bottom: 16px;
+}
+
+.cart-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cart-back-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+}
+
+.cart-back-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-muted);
 }
 
 .catalog-subtitle {
@@ -53,7 +88,7 @@
 
 .pos-search-input {
   padding-left: 42px !important;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border-radius: var(--radius-lg);
   font-size: 15px;
 }
@@ -73,15 +108,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-med-item:hover {
   border-color: var(--accent);
-  background-color: rgba(13, 148, 136, 0.03);
+  background-color: var(--accent-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .med-primary-info {
@@ -111,6 +149,21 @@
 .med-location {
   font-size: 10px;
   color: var(--text-muted);
+}
+
+.current-selling-batch-indicator {
+  font-size: 11px;
+  color: var(--text-primary);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.current-selling-batch-indicator strong {
+  color: var(--success);
+  font-weight: 700;
 }
 
 .med-status-action {
@@ -182,6 +235,7 @@
 
 .cart-items-container {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -195,9 +249,11 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
 }
 
 .cart-item-info h4 {
@@ -320,6 +376,7 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 16px;
+  flex: 0 0 auto;
 }
 
 .summary-row {
@@ -339,7 +396,7 @@
   text-align: right;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
 }
 
 .cash-received-input {
@@ -347,7 +404,7 @@
   text-align: right;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   font-weight: 600;
   border-color: var(--accent);
 }
@@ -399,7 +456,7 @@
   width: 100%;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
 }
 
 .checkbox-row {
@@ -431,13 +488,22 @@
   width: 160px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
 }
 
 .billing-date-note {
   font-size: 12px;
   color: var(--text-muted);
   max-width: 220px;
+}
+
+.btn-checkout {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
 }
 
 /* Animation */

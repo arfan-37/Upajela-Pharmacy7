@@ -10,6 +10,7 @@
   flex-direction: column;
   z-index: 100;
   transition: width var(--transition-normal);
+  box-shadow: var(--shadow-sm);
 }
 
 .sidebar-header {
@@ -83,6 +84,7 @@
   background-color: var(--accent-light);
   color: var(--accent);
   border: 1px solid rgba(13, 148, 136, 0.2);
+  font-weight: 600;
 }
 
 .nav-icon {
@@ -102,7 +104,7 @@
 .sidebar-footer {
   padding: 20px 24px;
   border-top: 1px solid var(--border);
-  background-color: rgba(8, 12, 20, 0.4);
+  background-color: var(--bg-card);
 }
 
 .footer-status {

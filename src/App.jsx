@@ -11,8 +11,9 @@ import CompanyPanel from './components/CompanyPanel';
 import { initialMedicines, initialTransactions, initialCompanies, initialCustomers } from './utils/mockData';
 import { rebuildCustomerHistoryTimeline, summarizeCustomerBalances } from './utils/customerHistory';
 import { rebuildCompanyTransactionTimeline, summarizeCompanyBalances } from './utils/companyHistory';
-import { addInventoryHistoryRecord, addCompanyHistoryRecord } from './utils/historyUtils';
+import { addCompanyHistoryRecord, addInventoryHistoryRecord } from './utils/historyUtils';
 import { addMedicineHistoryRecord } from './utils/medicineHistoryUtils';
+import { formatBatchLabel, normalizeMedicineRecord } from './utils/inventoryBatchUtils';
 import { translations } from './utils/translations';
 import './App.css';
 
@@ -25,6 +26,84 @@ const readStoredJson = (key, fallback) => {
     console.warn(`Failed to parse localStorage item "${key}"`, error);
     return fallback;
   }
+};
+
+const buildTransactionIndex = (transactions) => {
+  const index = new Map();
+  for (const tx of Array.isArray(transactions) ? transactions : []) {
+    if (!tx || typeof tx !== 'object') continue;
+    if (tx.id && !index.has(tx.id)) {
+      index.set(tx.id, tx);
+    }
+  }
+  return index;
+};
+
+const enrichSaleHistoryEntries = (customer, transactionIndex) => {
+  if (!Array.isArray(customer?.paymentHistory)) return customer;
+  const enriched = customer.paymentHistory.map((entry) => {
+    if (entry && entry.type === 'sale') {
+      const hasMissingProducts = !Array.isArray(entry.products) || entry.products.length === 0;
+      const hasMissingFields = !entry.totalPurchaseAmount && !entry.totalBill && !entry.totalAmount;
+      if (hasMissingProducts || hasMissingFields) {
+        const tx = entry.invoiceNumber ? transactionIndex.get(entry.invoiceNumber) : null;
+        if (tx) {
+          const products = Array.isArray(tx.items)
+            ? tx.items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price }))
+            : [];
+          const totalAmount = Number(tx.total || 0);
+          const cashReceived = Number(tx.cashReceived || 0);
+          const dueAmount = Number(Math.max(0, totalAmount - cashReceived).toFixed(2));
+          return {
+            ...entry,
+            products: hasMissingProducts ? products : entry.products,
+            totalPurchaseAmount: entry.totalPurchaseAmount || totalAmount,
+            totalBill: entry.totalBill || totalAmount,
+            totalAmount: entry.totalAmount || totalAmount,
+            cashPaid: entry.cashPaid ?? entry.cashAmount ?? entry.amountReceived ?? cashReceived,
+            dueCreated: entry.dueCreated ?? dueAmount,
+            cashAmount: entry.cashAmount ?? cashReceived,
+            amountReceived: entry.amountReceived ?? cashReceived,
+          };
+        }
+      }
+    }
+    return entry;
+  });
+
+  // Also enrich dueEntries with product info via invoiceNumber lookup
+  const enrichedDueEntries = (Array.isArray(customer?.dueEntries) ? customer.dueEntries : []).map((entry) => {
+    if (entry && entry.type === 'sale') {
+      const hasMissingProducts = !Array.isArray(entry.products) || entry.products.length === 0;
+      const hasTotalAmount = typeof entry.totalAmount !== 'undefined' && entry.totalAmount !== null;
+      const hasCash = typeof entry.cashAmount !== 'undefined' && entry.cashAmount !== null;
+      if (hasMissingProducts || !hasTotalAmount || !hasCash) {
+        const tx = entry.invoiceNumber ? transactionIndex.get(entry.invoiceNumber) : null;
+        if (tx) {
+          const products = Array.isArray(tx.items)
+            ? tx.items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price }))
+            : [];
+          const totalAmount = Number(tx.total || 0);
+          const cashReceived = Number(tx.cashReceived || 0);
+          return {
+            ...entry,
+            products: hasMissingProducts ? products : entry.products,
+            totalAmount: entry.totalAmount ?? totalAmount,
+            cashAmount: entry.cashAmount ?? cashReceived,
+            dueAmount: entry.dueAmount ?? Number(Math.max(0, totalAmount - cashReceived).toFixed(2)),
+          };
+        }
+      }
+    }
+    return entry;
+  });
+
+  return { ...customer, paymentHistory: enriched, dueEntries: enrichedDueEntries };
+};
+
+const cleanupCustomer = (customer, transactionIndex) => {
+  const enriched = enrichSaleHistoryEntries(customer, transactionIndex);
+  return normalizeCustomer(enriched);
 };
 
 const normalizeCustomer = (customer) => {
@@ -133,7 +212,7 @@ function App() {
 
   // Global States (preserves state across browser tabs using localStorage)
   const [medicines, setMedicines] = useState(() => {
-    return readStoredJson('shabab_medicines', initialMedicines);
+    return readStoredJson('shabab_medicines', initialMedicines).map(normalizeMedicineRecord);
   });
 
   const [transactions, setTransactions] = useState(() => {
@@ -143,7 +222,9 @@ function App() {
   const [customers, setCustomers] = useState(() => {
     const parsed = readStoredJson('shabab_customers', []);
     const merged = mergeSeedRecords(parsed, initialCustomers);
-    return merged.map(normalizeCustomer);
+    const storedTransactions = readStoredJson('shabab_transactions', initialTransactions);
+    const transactionIndex = buildTransactionIndex([...storedTransactions, ...initialTransactions]);
+    return merged.map((c) => cleanupCustomer(c, transactionIndex));
   });
 
   const [companies, setCompanies] = useState(() => {
@@ -209,11 +290,15 @@ function App() {
 
   // Inventory Management State Mutation handlers
   const handleAddMedicine = (newMed) => {
-    setMedicines(prev => [newMed, ...prev]);
+    setMedicines(prev => [normalizeMedicineRecord(newMed), ...prev]);
   };
 
   const handleUpdateMedicine = (updatedMed) => {
-    setMedicines(prev => prev.map(m => m.id === updatedMed.id ? updatedMed : m));
+    setMedicines(prev => prev.map(m => (
+      m.id === updatedMed.id
+        ? normalizeMedicineRecord({ ...m, ...updatedMed, batches: updatedMed.batches || m.batches })
+        : m
+    )));
   };
 
   const handleDeleteMedicine = (id) => {
@@ -222,57 +307,174 @@ function App() {
 
   // Stock reduction when items are sold in POS
   const handleUpdateMedicinesStock = (cartItems) => {
-    setMedicines(prev => prev.map(m => {
-      const cartItem = cartItems.find(c => c.id === m.id);
-      if (cartItem) {
-        const previousStock = Number(m.stock || 0);
-        const soldQty = Number(cartItem.quantity || 0);
-        const newStock = Math.max(0, previousStock - soldQty);
+    const parseBatchNumber = (label) => {
+      const match = String(label || '').match(/Batch\s+(\d+)/i);
+      return match ? Number(match[1]) : null;
+    };
+
+    setMedicines(prev => prev.map((medicine) => {
+      const saleLines = Array.isArray(cartItems)
+        ? cartItems.filter((item) => (item.medicineId || item.id) === medicine.id)
+        : [];
+
+      if (saleLines.length === 0) return medicine;
+
+      const normalizedMedicine = normalizeMedicineRecord(medicine);
+      const originalTotalStock = Number(normalizedMedicine.stock || 0);
+      let runningBatches = normalizedMedicine.batches.map((batch) => ({ ...batch }));
+
+      saleLines.forEach((line) => {
+        const batchNumber = Number(line.batchNumber || parseBatchNumber(line.batchNo));
+        const batchLabel = line.batchNo || formatBatchLabel(batchNumber);
+        const batchIndex = runningBatches.findIndex((batch) => {
+          return batch.batchNumber === batchNumber || batch.batchLabel === batchLabel;
+        });
+
+        if (batchIndex === -1) return;
+
+        const targetBatch = runningBatches[batchIndex];
+        const previousBatchStock = Number(targetBatch.quantity || 0);
+        const soldQty = Math.min(previousBatchStock, Number(line.quantity || 0));
+        const currentBatchStock = Math.max(0, previousBatchStock - soldQty);
+
+        runningBatches[batchIndex] = {
+          ...targetBatch,
+          quantity: currentBatchStock,
+        };
+
+        addInventoryHistoryRecord({
+          medicineName: normalizedMedicine.name,
+          companyName: '-',
+          category: normalizedMedicine.category,
+          animalType: normalizedMedicine.animalType,
+          batchNo: batchLabel,
+          batchNumber,
+          previousStock: previousBatchStock,
+          addedQuantity: -soldQty,
+          newTotalStock: currentBatchStock,
+          purchaseCost: Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0),
+          sellingPrice: Number(targetBatch.sellingPrice || normalizedMedicine.price || 0),
+          totalAmount: Number((Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0) * soldQty).toFixed(2)),
+          expiryDate: targetBatch.expiryDate || normalizedMedicine.expiryDate,
+          shelfLocation: targetBatch.location || normalizedMedicine.location,
+          addedBy: currentRoleRef.current || 'Staff',
+          action: 'Sold',
+        }, currentRoleRef.current || 'Staff');
+
+        if (currentBatchStock < 15 && previousBatchStock >= 15) {
+          addInventoryHistoryRecord({
+            medicineName: normalizedMedicine.name,
+            companyName: '-',
+            category: normalizedMedicine.category,
+            animalType: normalizedMedicine.animalType,
+            batchNo: batchLabel,
+            batchNumber,
+            previousStock: previousBatchStock,
+            addedQuantity: 0,
+            newTotalStock: currentBatchStock,
+            purchaseCost: Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0),
+            sellingPrice: Number(targetBatch.sellingPrice || normalizedMedicine.price || 0),
+            totalAmount: 0,
+            expiryDate: targetBatch.expiryDate || normalizedMedicine.expiryDate,
+            shelfLocation: targetBatch.location || normalizedMedicine.location,
+            addedBy: currentRoleRef.current || 'Staff',
+            action: 'Status Changed',
+          }, currentRoleRef.current || 'Staff');
+        }
+
+        if (currentBatchStock === 0 && previousBatchStock > 0) {
+          addInventoryHistoryRecord({
+            medicineName: normalizedMedicine.name,
+            companyName: '-',
+            category: normalizedMedicine.category,
+            animalType: normalizedMedicine.animalType,
+            batchNo: batchLabel,
+            batchNumber,
+            previousStock: previousBatchStock,
+            addedQuantity: 0,
+            newTotalStock: currentBatchStock,
+            purchaseCost: Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0),
+            sellingPrice: Number(targetBatch.sellingPrice || normalizedMedicine.price || 0),
+            totalAmount: 0,
+            expiryDate: targetBatch.expiryDate || normalizedMedicine.expiryDate,
+            shelfLocation: targetBatch.location || normalizedMedicine.location,
+            addedBy: currentRoleRef.current || 'Staff',
+            action: 'Status Changed',
+            notes: 'Completed / Stock Finished',
+          }, currentRoleRef.current || 'Staff');
+        }
 
         addMedicineHistoryRecord({
-          medicineId: m.id,
-          medicineName: m.name,
-          genericName: m.genericName,
-          category: m.category,
+          medicineId: normalizedMedicine.id,
+          medicineName: normalizedMedicine.name,
+          genericName: normalizedMedicine.genericName,
+          category: normalizedMedicine.category,
+          animalType: normalizedMedicine.animalType,
           action: 'Sold',
-          previousStock,
+          previousStock: previousBatchStock,
           addedQuantity: -soldQty,
-          currentStock: newStock,
-          purchaseCost: Number(m.cost || 0),
-          sellingPrice: Number(m.price || 0),
-          expiryDate: m.expiryDate,
-          shelfLocation: m.location,
-          batchNo: '-',
+          currentStock: currentBatchStock,
+          purchaseCost: Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0),
+          sellingPrice: Number(targetBatch.sellingPrice || normalizedMedicine.price || 0),
+          expiryDate: targetBatch.expiryDate || normalizedMedicine.expiryDate,
+          shelfLocation: targetBatch.location || normalizedMedicine.location,
+          batchNo: batchLabel,
+          batchNumber,
           supplier: '-',
           notes: `Sold via POS - ${soldQty} unit(s)`,
         }, currentRoleRef.current || 'Staff');
 
-        if (newStock < 15 && previousStock >= 15) {
+        if (currentBatchStock < 15 && previousBatchStock >= 15) {
           addMedicineHistoryRecord({
-            medicineId: m.id,
-            medicineName: m.name,
-            genericName: m.genericName,
-            category: m.category,
+            medicineId: normalizedMedicine.id,
+            medicineName: normalizedMedicine.name,
+            genericName: normalizedMedicine.genericName,
+            category: normalizedMedicine.category,
+            animalType: normalizedMedicine.animalType,
             action: 'Status Changed',
-            previousStock,
+            previousStock: previousBatchStock,
             addedQuantity: 0,
-            currentStock: newStock,
-            purchaseCost: Number(m.cost || 0),
-            sellingPrice: Number(m.price || 0),
-            expiryDate: m.expiryDate,
-            shelfLocation: m.location,
-            batchNo: '-',
+            currentStock: currentBatchStock,
+            purchaseCost: Number(targetBatch.purchaseCost || normalizedMedicine.cost || 0),
+            sellingPrice: Number(targetBatch.sellingPrice || normalizedMedicine.price || 0),
+            expiryDate: targetBatch.expiryDate || normalizedMedicine.expiryDate,
+            shelfLocation: targetBatch.location || normalizedMedicine.location,
+            batchNo: batchLabel,
+            batchNumber,
             supplier: '-',
             notes: 'Low stock warning - stock below 15',
           }, currentRoleRef.current || 'Staff');
         }
+      });
 
-        return {
-          ...m,
-          stock: newStock
-        };
+      const nextMedicine = {
+        ...normalizedMedicine,
+        batches: runningBatches,
+        stock: runningBatches.reduce((sum, batch) => sum + Number(batch.quantity || 0), 0),
+      };
+
+      if (nextMedicine.stock < 15 && originalTotalStock >= 15) {
+        addMedicineHistoryRecord({
+          medicineId: normalizedMedicine.id,
+          medicineName: normalizedMedicine.name,
+          genericName: normalizedMedicine.genericName,
+          category: normalizedMedicine.category,
+          animalType: normalizedMedicine.animalType,
+          action: 'Status Changed',
+          previousStock: originalTotalStock,
+          addedQuantity: 0,
+          currentStock: nextMedicine.stock,
+          purchaseCost: Number(nextMedicine.cost || 0),
+          sellingPrice: Number(nextMedicine.price || 0),
+          expiryDate: nextMedicine.expiryDate,
+          shelfLocation: nextMedicine.location,
+          batchNo: '-',
+          supplier: '-',
+          notes: 'Low stock warning - stock below 15',
+        }, currentRoleRef.current || 'Staff');
       }
-      return m;
+
+      return nextMedicine;
     }));
   };
 
@@ -305,7 +507,7 @@ function App() {
       const normalizedCustomer = normalizeCustomer(customer);
       const totalAmount = Number(saleSummary?.totalAmount || 0);
       const cashAmount = Number(saleSummary?.cashAmount || 0);
-      const dueAmount = Number(saleSummary?.dueAmount || 0);
+      const dueAmount = Number(Math.max(0, totalAmount - cashAmount).toFixed(2));
       const purchaseDate = saleSummary?.purchaseDate || new Date().toISOString();
       const overallDueAfterSale = Number((normalizedCustomer.dueAmount + dueAmount).toFixed(2));
 
@@ -369,7 +571,6 @@ function App() {
       const paymentAmount = Number(amount || 0);
       const paymentDateValue = paymentDate || new Date().toISOString();
       const previousDue = Number(normalizedCustomer.dueAmount || 0);
-      const nextCashPaid = Number((normalizedCustomer.cashPaid + paymentAmount).toFixed(2));
       const nextDueAmount = Number(Math.max(0, previousDue - paymentAmount).toFixed(2));
 
       const nextEntries = [

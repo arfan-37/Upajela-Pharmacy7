@@ -20,6 +20,11 @@ const save = (key, data) => {
 
 const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
+const formatBatchLabel = (batchNumber) => {
+  const numeric = Number(batchNumber);
+  return Number.isFinite(numeric) && numeric > 0 ? `Batch ${Math.floor(numeric)}` : '-';
+};
+
 export const loadInventoryHistory = () => load(INVENTORY_HISTORY_KEY);
 export const saveInventoryHistory = (records) => save(INVENTORY_HISTORY_KEY, records);
 
@@ -56,6 +61,8 @@ export const generateInventoryHistoryFromMedicines = (medicines = [], currentUse
   if (!Array.isArray(medicines) || medicines.length === 0) return [];
 
   return medicines.map((medicine) => {
+    const batches = Array.isArray(medicine.batches) ? medicine.batches : [];
+    const firstBatch = batches[0] || null;
     const purchaseCost = Number(medicine.cost || 0);
     const quantity = Number(medicine.stock || 0);
     const sellingPrice = Number(medicine.price || 0);
@@ -67,7 +74,7 @@ export const generateInventoryHistoryFromMedicines = (medicines = [], currentUse
       medicineName: medicine.name || '-',
       companyName: '-',
       category: medicine.category || '-',
-      batchNo: medicine.id || '-',
+      batchNo: firstBatch?.batchLabel || formatBatchLabel(firstBatch?.batchNumber),
       previousStock: 0,
       addedQuantity: quantity,
       newTotalStock: quantity,

@@ -11,6 +11,8 @@ export const initialMedicines = [
     expiryDate: "2027-08-15",
     location: "North Rack 1",
     description: "For pain relief and fever",
+    tabletsPerStrip: 10,
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-001",
@@ -32,13 +34,17 @@ export const initialMedicines = [
     category: "Capsule",
     price: 7.00,
     cost: 5.50,
-    stock: 120,
-    expiryDate: "2026-08-20", // Expiring soon (about 1 month if today is July 2026)
+    stock: 150,
+    expiryDate: "2026-08-20",
     location: "South Rack 2",
     description: "Proton pump inhibitor for acidity",
+    tabletsPerStrip: 1,
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-002",
+        batchNumber: 1,
+        batchLabel: "Batch 1",
         quantity: 120,
         expiryDate: "2026-08-20",
         purchaseCost: 5.50,
@@ -46,6 +52,18 @@ export const initialMedicines = [
         location: "South Rack 2",
         stockInDate: "2026-07-01T10:00:00.000Z",
         notes: "Initial stock"
+      },
+      {
+        id: "BATCH-MED-002-2",
+        batchNumber: 2,
+        batchLabel: "Batch 2",
+        quantity: 30,
+        expiryDate: "2026-08-09",
+        purchaseCost: 5.50,
+        sellingPrice: 7.00,
+        location: "South Rack 2",
+        stockInDate: "2026-07-05T10:00:00.000Z",
+        notes: "Supplemental stock"
       },
     ],
     animalType: 'Other',
@@ -61,6 +79,7 @@ export const initialMedicines = [
     expiryDate: "2027-01-10",
     location: "North Rack 3",
     description: "Antihistamine for allergies",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-003",
@@ -86,6 +105,7 @@ export const initialMedicines = [
     expiryDate: "2026-08-10", // Expiring soon
     location: "East Rack 1",
     description: "Cough suppressant syrup",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-004",
@@ -111,6 +131,7 @@ export const initialMedicines = [
     expiryDate: "2028-03-30",
     location: "West Rack 1",
     description: "Broad-spectrum antibiotic",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-005",
@@ -136,6 +157,7 @@ export const initialMedicines = [
     expiryDate: "2027-12-05",
     location: "North Rack 2",
     description: "Antiallergic tablet",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-006",
@@ -161,6 +183,7 @@ export const initialMedicines = [
     expiryDate: "2026-07-28", // Urgent: Expiring in less than a month!
     location: "South Rack 1",
     description: "Anti-ulcerant for heartburn",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-007",
@@ -186,6 +209,7 @@ export const initialMedicines = [
     expiryDate: "2027-05-18",
     location: "West Rack 2",
     description: "Antiprotozoal and antibacterial",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-008",
@@ -211,6 +235,7 @@ export const initialMedicines = [
     expiryDate: "2027-10-22",
     location: "North Rack 1",
     description: "Chewable vitamin C supplement",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-009",
@@ -236,6 +261,7 @@ export const initialMedicines = [
     expiryDate: "2027-02-14",
     location: "North Rack 1",
     description: "Insulin suspension for diabetes management",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-010",
@@ -261,6 +287,7 @@ export const initialMedicines = [
     expiryDate: "2027-06-18",
     location: "South Rack 3",
     description: "Acid reflux and ulcer relief",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-011",
@@ -286,6 +313,7 @@ export const initialMedicines = [
     expiryDate: "2026-12-30",
     location: "West Rack 3",
     description: "Antibiotic for bacterial infections",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-012",
@@ -311,6 +339,7 @@ export const initialMedicines = [
     expiryDate: "2027-11-02",
     location: "South Rack 4",
     description: "Gastric acid reducer",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-013",
@@ -336,6 +365,7 @@ export const initialMedicines = [
     expiryDate: "2028-01-20",
     location: "North Rack 4",
     description: "Anti-allergy and asthma support",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-014",
@@ -361,6 +391,7 @@ export const initialMedicines = [
     expiryDate: "2026-05-20",
     location: "North Rack 5",
     description: "Pain relief and anti-inflammatory",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-016",
@@ -386,6 +417,7 @@ export const initialMedicines = [
     expiryDate: "2026-06-30",
     location: "South Rack 1",
     description: "Anticonvulsant and anxiolytic",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-017",
@@ -411,6 +443,7 @@ export const initialMedicines = [
     expiryDate: "2026-07-18",
     location: "South Rack 2",
     description: "Anti-anginal tablet - EXPIRED",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-018",
@@ -436,6 +469,7 @@ export const initialMedicines = [
     expiryDate: "2026-05-15",
     location: "West Rack 5",
     description: "Antibiotic for infections",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-019",
@@ -461,6 +495,7 @@ export const initialMedicines = [
     expiryDate: "2026-04-20",
     location: "East Rack 1",
     description: "Antiplatelet for heart patients",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-020",
@@ -486,6 +521,7 @@ export const initialMedicines = [
     expiryDate: "2026-08-01",
     location: "South Rack 5",
     description: "Acidity and gastric relief",
+    tabletsPerStrip: 1,
     batches: [
       {
         id: "BATCH-MED-021",
@@ -511,6 +547,7 @@ export const initialMedicines = [
     expiryDate: "2026-07-25",
     location: "West Rack 1",
     description: "Anti-TB antibiotic - expiring very soon",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-022",
@@ -536,6 +573,7 @@ export const initialMedicines = [
     expiryDate: "2026-09-15",
     location: "North Rack 6",
     description: "Pain relief for arthritis",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-023",
@@ -561,6 +599,7 @@ export const initialMedicines = [
     expiryDate: "2026-10-01",
     location: "East Rack 2",
     description: "Beta-blocker for blood pressure",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-024",
@@ -586,6 +625,7 @@ export const initialMedicines = [
     expiryDate: "2026-08-10",
     location: "North Rack 7",
     description: "Pain reliever and fever reducer",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-025",
@@ -611,6 +651,7 @@ export const initialMedicines = [
     expiryDate: "2027-03-15",
     location: "West Rack 6",
     description: "Broad-spectrum antibiotic",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-026",
@@ -636,6 +677,7 @@ export const initialMedicines = [
     expiryDate: "2027-06-20",
     location: "North Rack 2",
     description: "Expectorant for cough",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-027",
@@ -661,6 +703,7 @@ export const initialMedicines = [
     expiryDate: "2027-04-10",
     location: "West Rack 7",
     description: "Antibiotic and antiprotozoal",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-028",
@@ -686,6 +729,7 @@ export const initialMedicines = [
     expiryDate: "2027-07-01",
     location: "East Rack 3",
     description: "Angiotensin receptor blocker for BP",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-029",
@@ -711,6 +755,7 @@ export const initialMedicines = [
     expiryDate: "2026-07-19",
     location: "North Rack 1",
     description: "Dummy medicine for auto-expiry testing",
+    tabletsPerStrip: 10,
     batches: [
       {
         id: "BATCH-MED-031",

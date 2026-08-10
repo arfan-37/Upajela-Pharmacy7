@@ -18,6 +18,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .history-tab {
@@ -35,18 +36,24 @@
 .history-tab:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
+  border-color: rgba(13, 148, 136, 0.3);
 }
 
 .history-tab.active {
   background: var(--accent);
-  color: var(--text-primary);
+  color: #ffffff;
   border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
 }
 
 /* Filters */
 .history-filters {
   padding: 20px 24px;
   margin-bottom: 24px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .history-filters-grid {

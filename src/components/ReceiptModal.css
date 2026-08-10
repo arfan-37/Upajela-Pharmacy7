@@ -1,8 +1,8 @@
 .receipt-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
+  background-color: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -163,7 +163,7 @@
   body * {
     visibility: hidden !important;
   }
-  .print-area, .print-area * {
+  .receipt-overlay, .receipt-overlay *, .print-area, .print-area * {
     visibility: visible !important;
   }
   .receipt-overlay {
@@ -190,7 +190,7 @@
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
-    max-width: 80mm !important; /* thermal size */
+    max-width: 80mm !important;
     color: #000000 !important;
     background: #ffffff !important;
   }

@@ -100,18 +100,23 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .action-buttons .edit-btn:hover {
   background-color: var(--accent-light);
   border-color: var(--accent);
   color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .action-buttons .delete-btn:hover {
-  background-color: var(--danger-light);
+  background-color: rgba(220, 38, 38, 0.08);
   border-color: var(--danger);
   color: var(--danger);
+  transform: translateY(-1px);
 }
 
 /* History list */
@@ -136,10 +141,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.04);
+  background: var(--bg-card);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 0.85rem;
+  border: 1px solid transparent;
+  transition: border-color var(--transition-fast);
+}
+
+.history-item:hover {
+  border-color: var(--border);
 }
 
 .history-main {

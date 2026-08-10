@@ -43,18 +43,19 @@
   background-color: var(--bg-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 .item-id {
   font-family: monospace;
   background-color: var(--bg-card);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   color: var(--text-secondary);
   font-size: 12px;
   border: 1px solid var(--border);
+  font-weight: 500;
 }
 
 .med-title-cell {
@@ -84,7 +85,7 @@
 
 /* Highlight rows */
 .row-expired td {
-  background-color: rgba(225, 29, 72, 0.06) !important;
+  background-color: rgba(220, 38, 38, 0.04) !important;
   color: var(--text-secondary);
 }
 .row-expired td strong {
@@ -99,7 +100,7 @@
 }
 
 .row-low-stock td {
-  background-color: rgba(245, 158, 11, 0.02) !important;
+  background-color: rgba(245, 158, 11, 0.03) !important;
 }
 
 .empty-table-cell {
@@ -115,32 +116,38 @@
 }
 
 .action-buttons button {
-  background-color: var(--bg-primary);
-  border-color: var(--border);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
   width: 32px;
   height: 32px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .action-buttons .edit-btn:hover {
   background-color: var(--accent-light);
   border-color: var(--accent);
   color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .action-buttons .restock-btn:hover {
   background-color: rgba(16, 185, 129, 0.1);
   border-color: var(--success);
   color: var(--success);
+  transform: translateY(-1px);
 }
 
 .action-buttons .delete-btn:hover {
-  background-color: var(--danger-light);
+  background-color: rgba(220, 38, 38, 0.08);
   border-color: var(--danger);
   color: var(--danger);
+  transform: translateY(-1px);
 }
 
 /* Action buttons, table enhancements, badges, empty state, etc. are defined above */
@@ -148,6 +155,72 @@
 .medicine-history-content {
   max-height: 65vh;
   overflow: auto;
+}
+
+.inventory-history-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.inventory-history-tab {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.inventory-history-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.inventory-history-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.batch-history-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.batch-summary-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.batch-summary-card p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.batch-summary-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.batch-table {
+  min-width: 1200px;
 }
 
 .medicine-history-content .history-empty {
@@ -171,4 +244,12 @@
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.batch-table .row-current-selling td {
+  background-color: rgba(16, 185, 129, 0.04) !important;
+}
+
+.batch-table .row-current-selling td:first-child {
+  border-left: 3px solid var(--success);
 }

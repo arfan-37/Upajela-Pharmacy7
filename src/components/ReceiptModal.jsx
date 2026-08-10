@@ -9,6 +9,7 @@ export default function ReceiptModal({ transaction, onClose, t }) {
     date: 'Date:',
     cashier: 'Cashier:',
     medicine: 'Medicine',
+    batch: 'Batch',
     qty: 'Qty',
     price: 'Price',
     total: 'Total',
@@ -30,8 +31,15 @@ export default function ReceiptModal({ transaction, onClose, t }) {
   };
 
   const formatDate = (isoStr) => {
+    if (!isoStr) return '-';
     const d = new Date(isoStr);
+    if (Number.isNaN(d.getTime())) return String(isoStr);
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  };
+
+  const safeNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   };
 
   return (
@@ -61,20 +69,28 @@ export default function ReceiptModal({ transaction, onClose, t }) {
             <thead>
               <tr>
                 <th className="text-left">{text.medicine}</th>
+                <th className="text-left">{text.batch}</th>
                 <th className="text-center">{text.qty}</th>
                 <th className="text-right">{text.price}</th>
                 <th className="text-right">{text.total}</th>
               </tr>
             </thead>
             <tbody>
-              {transaction.items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="text-left">{item.name}</td>
-                  <td className="text-center">{item.quantity}</td>
-                  <td className="text-right">৳{item.price.toFixed(2)}</td>
-                  <td className="text-right">৳{(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              ))}
+              {Array.isArray(transaction.items) && transaction.items.map((item, idx) => {
+                const isStripBased = item.tabletsPerStrip && item.tabletsPerStrip > 1;
+                const qtyDisplay = isStripBased
+                  ? `${safeNumber(item.strips, 0)} ${t?.pos?.stripUnit || 'str'} + ${safeNumber(item.looseTablets, 0)} ${t?.pos?.looseTabletsLabel || 'loose'} (${safeNumber(item.totalTablets, 0)})`
+                  : safeNumber(item.quantity, 0);
+                return (
+                  <tr key={idx}>
+                    <td className="text-left">{item.name || '-'}</td>
+                    <td className="text-left">{item.batchNo || '-'}</td>
+                    <td className="text-center">{qtyDisplay}</td>
+                    <td className="text-right">৳{safeNumber(item.price, 0).toFixed(2)}</td>
+                    <td className="text-right">৳{(safeNumber(item.price, 0) * safeNumber(item.quantity || item.totalTablets, 0)).toFixed(2)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -83,31 +99,31 @@ export default function ReceiptModal({ transaction, onClose, t }) {
           <div className="receipt-totals">
             <div className="totals-row">
               <span>{text.subtotal}</span>
-              <span>৳{transaction.subtotal.toFixed(2)}</span>
+              <span>৳{safeNumber(transaction.subtotal, 0).toFixed(2)}</span>
             </div>
-            {transaction.discount > 0 && (
+            {safeNumber(transaction.discount, 0) > 0 && (
               <div className="totals-row">
                 <span>{text.discount}</span>
-                <span>-৳{transaction.discount.toFixed(2)}</span>
+                <span>-৳{safeNumber(transaction.discount, 0).toFixed(2)}</span>
               </div>
             )}
             <div className="totals-row">
               <span>{text.tax}</span>
-              <span>৳{transaction.tax.toFixed(2)}</span>
+              <span>৳{safeNumber(transaction.tax, 0).toFixed(2)}</span>
             </div>
             <div className="receipt-divider dashed" />
             <div className="totals-row grand-total">
               <span>{text.grandTotal}</span>
-              <span>৳{transaction.total.toFixed(2)}</span>
+              <span>৳{safeNumber(transaction.total, 0).toFixed(2)}</span>
             </div>
             <div className="receipt-divider dashed" />
             <div className="totals-row">
               <span>{text.cashReceived}</span>
-              <span>৳{transaction.cashReceived.toFixed(2)}</span>
+              <span>৳{safeNumber(transaction.cashReceived, 0).toFixed(2)}</span>
             </div>
             <div className="totals-row">
               <span>{text.changeGiven}</span>
-              <span>৳{transaction.changeGiven.toFixed(2)}</span>
+              <span>৳{safeNumber(transaction.changeGiven, 0).toFixed(2)}</span>
             </div>
           </div>
 
