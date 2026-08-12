@@ -488,6 +488,8 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
                   placeholder="0"
                   value={formInitialDue}
                   onChange={(e) => setFormInitialDue(e.target.value)}
+                  disabled={modalMode === 'edit'}
+                  readOnly={modalMode === 'edit'}
                 />
               </div>
 

@@ -13,7 +13,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [creditMode, setCreditMode] = useState(false);
   const [purchaseDateMode, setPurchaseDateMode] = useState('auto');
   const [manualPurchaseDate, setManualPurchaseDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [customerForm, setCustomerForm] = useState({
@@ -170,10 +169,9 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
   const calculatedTax = (subtotal - discount) > 0 ? (subtotal - discount) * 0.05 : 0; // 5% VAT
   const total = Math.max(0, subtotal - discount + calculatedTax);
   const enteredPayment = Number(cashReceived || 0);
-  const paidAmount = cashReceived === '' ? (creditMode ? 0 : total) : enteredPayment;
-  const cashAmount = Math.min(Math.max(0, paidAmount), total);
+  const cashAmount = Math.min(Math.max(0, enteredPayment), total);
   const remainingDue = Math.max(0, total - cashAmount);
-  const changeGiven = cashAmount > total ? cashAmount - total : 0;
+  const changeGiven = Math.max(0, cashAmount - total);
   const customerReady = remainingDue > 0
     ? (customerMode === 'new'
         ? Boolean(customerForm.name.trim() && customerForm.phone.trim() && customerForm.address.trim())
@@ -188,6 +186,11 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
     if (isProcessing) return;
     if (cart.length === 0) {
       setCheckoutError(t.pos?.emptyCartTitle || 'Cart is empty.');
+      return;
+    }
+    const enteredPayment = Number(cashReceived || 0);
+    if (enteredPayment > total) {
+      setCheckoutError(t.pos?.paymentExceedsTotal || 'Cash received cannot exceed the grand total.');
       return;
     }
     if (remainingDue > 0 && !customerReady) {
@@ -251,9 +254,8 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       const calculatedTax = (calculatedSubtotal - discount) > 0 ? (calculatedSubtotal - discount) * 0.05 : 0;
       const calculatedTotal = Math.max(0, calculatedSubtotal - discount + calculatedTax);
       const enteredPayment = Number(cashReceived || 0);
-      const paidAmountForReceipt = cashReceived === '' ? (creditMode ? 0 : calculatedTotal) : enteredPayment;
-      const cashAmount = Math.min(Math.max(0, paidAmountForReceipt), calculatedTotal);
-      const changeGiven = cashAmount > calculatedTotal ? cashAmount - calculatedTotal : 0;
+      const cashAmount = Math.min(Math.max(0, enteredPayment), calculatedTotal);
+      const changeGiven = Math.max(0, cashAmount - calculatedTotal);
       const remainingDueForReceipt = Math.max(0, calculatedTotal - cashAmount);
       const paymentType = remainingDueForReceipt === 0 ? 'cash' : cashAmount === 0 ? 'due' : 'partial';
       const selectedPurchaseDate = purchaseDateMode === 'manual' && manualPurchaseDate
@@ -308,7 +310,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
     setCashReceived('');
     setSearchQuery('');
     setSelectedCustomerId('');
-    setCreditMode(false);
     setCustomerMode('existing');
     setCustomerForm({ name: '', phone: '', address: '' });
     setShowReceipt(false);
@@ -329,7 +330,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
     setCashReceived('');
     setSearchQuery('');
     setSelectedCustomerId('');
-    setCreditMode(false);
     setCustomerMode('existing');
     setCustomerForm({ name: '', phone: '', address: '' });
     setShowBackConfirm(false);
@@ -537,23 +537,25 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
               <span>৳ {subtotal.toFixed(2)}</span>
             </div>
 
-            <div className="summary-row form-row">
+            <div className="summary-row form-row discount-row">
               <span>{t.pos.discount}</span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className="form-control discount-input"
-                value={discount === 0 ? '' : discount}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '') return setDiscount(0);
-                  const n = parseFloat(v);
-                  if (Number.isNaN(n)) return;
-                  // clamp between 0 and subtotal
-                  setDiscount(Math.max(0, Math.min(subtotal, n)));
-                }}
-              />
+              <div className="discount-input-wrapper">
+                <span className="discount-currency">৳</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="form-control discount-input"
+                  value={discount === 0 ? '' : discount}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '') return setDiscount(0);
+                    const n = parseFloat(v);
+                    if (Number.isNaN(n)) return;
+                    setDiscount(Math.max(0, Math.min(subtotal, n)));
+                  }}
+                />
+              </div>
             </div>
 
             <div className="summary-row">
@@ -578,7 +580,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                 value={cashReceived}
                 onChange={(e) => {
                   const v = e.target.value;
-                  // allow empty string while typing
                   if (v === '') return setCashReceived('');
                   const n = parseFloat(v);
                   if (Number.isNaN(n)) return;
@@ -592,14 +593,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                 <span>{t.pos.dueHint}</span>
               </div>
             )}
-
-            <div className="summary-row form-row">
-              <span>{t.pos.paymentMode}</span>
-              <label className="checkbox-row">
-                <input type="checkbox" checked={creditMode} onChange={(e) => setCreditMode(e.target.checked)} />
-                <span>{t.pos.sellOnDue}</span>
-              </label>
-            </div>
 
             <div className="summary-row form-row">
               <span>{t.pos.billingDateLabel}</span>
@@ -700,7 +693,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
             {(cashReceived !== '' || remainingDue === 0) && (
               <div className="summary-row change-row animate-fade">
                 <span>{remainingDue > 0 ? 'Amount Paid' : 'Change Given'}</span>
-                <span className="change-val">৳ {remainingDue > 0 ? paidAmount.toFixed(2) : changeGiven.toFixed(2)}</span>
+                <span className="change-val">৳ {remainingDue > 0 ? cashAmount.toFixed(2) : changeGiven.toFixed(2)}</span>
               </div>
             )}
           </div>

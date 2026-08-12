@@ -344,7 +344,18 @@ export default function Inventory({ medicines, onAddMedicine, onUpdateMedicine, 
         batches: originalMed?.batches || [],
         stock: getMedicineTotalStock(originalMed),
       });
-      onUpdateMedicine(updatedMed);
+
+      const updatedBatches = (updatedMed.batches || []).map(batch => ({
+        ...batch,
+        sellingPrice: payload.price,
+      }));
+
+      const finalMed = normalizeMedicineRecord({
+        ...updatedMed,
+        batches: updatedBatches,
+      });
+
+      onUpdateMedicine(finalMed);
       addInventoryHistoryRecord({
         medicineName: updatedMed.name,
         companyName: '-',

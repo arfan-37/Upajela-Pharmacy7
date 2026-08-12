@@ -20,8 +20,8 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
           {dialogMessage}
         </p>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onCancel}>{cancelLabel}</button>
-          <button className="btn btn-danger" onClick={onConfirm}>{confirmLabel}</button>
+          <button className="btn btn-secondary" onClick={onCancel}>{dialogCancelLabel}</button>
+          <button className="btn btn-danger" onClick={onConfirm}>{dialogConfirmLabel}</button>
         </div>
       </div>
     </div>
