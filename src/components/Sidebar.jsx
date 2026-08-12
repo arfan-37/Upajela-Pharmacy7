@@ -6,6 +6,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, t }) {
   const tabs = [
     { id: 'dashboard', name: t.sidebar.dashboard, icon: '📊', adminOnly: false },
     { id: 'pos', name: t.sidebar.pos, icon: '🛒', adminOnly: false },
+    { id: 'returns', name: t.sidebar.returns, icon: '↩️', adminOnly: false },
     { id: 'customers', name: t.sidebar.customers, icon: '👤', adminOnly: false },
     { id: 'inventory', name: t.sidebar.inventory, icon: '📦', adminOnly: false },
     { id: 'companies', name: t.sidebar.companies, icon: '🏭', adminOnly: false },

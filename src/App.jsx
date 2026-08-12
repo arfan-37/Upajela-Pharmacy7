@@ -8,12 +8,13 @@ import Reports from './components/Reports';
 import Login from './components/Login';
 import CustomerPanel from './components/CustomerPanel';
 import CompanyPanel from './components/CompanyPanel';
+import Returns from './components/Returns';
 import { initialMedicines, initialTransactions, initialCompanies, initialCustomers } from './utils/mockData';
 import { rebuildCustomerHistoryTimeline, summarizeCustomerBalances } from './utils/customerHistory';
 import { rebuildCompanyTransactionTimeline, summarizeCompanyBalances } from './utils/companyHistory';
 import { addCompanyHistoryRecord, addInventoryHistoryRecord } from './utils/historyUtils';
 import { addMedicineHistoryRecord } from './utils/medicineHistoryUtils';
-import { formatBatchLabel, normalizeMedicineRecord } from './utils/inventoryBatchUtils';
+import { formatBatchLabel, normalizeMedicineRecord, isBatchExpired, getMedicineTotalStock, getMedicineBatches } from './utils/inventoryBatchUtils';
 import { translations } from './utils/translations';
 import './App.css';
 
@@ -238,10 +239,18 @@ function App() {
     return saved ? Number(saved) : 0;
   });
 
+  const [returns, setReturns] = useState(() => {
+    const saved = localStorage.getItem('shabab_returns');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [inventoryFilter, setInventoryFilter] = useState('All');
 
   // Persist states to Local Storage on change
+  useEffect(() => {
+    localStorage.setItem('shabab_returns', JSON.stringify(returns));
+  }, [returns]);
   useEffect(() => {
     localStorage.setItem('shabab_medicines', JSON.stringify(medicines));
   }, [medicines]);
@@ -621,6 +630,116 @@ function App() {
     }));
   };
 
+  const handleProcessReturn = ({ returns: returnRecords, originalTransaction, returnItems }) => {
+    setReturns(prev => [...returnRecords, ...prev]);
+
+    const totalRefund = returnRecords.reduce((sum, r) => sum + r.refundAmount, 0);
+    const originalCustomerId = originalTransaction.customer?.id;
+
+    if (totalRefund > 0) {
+      if (originalTransaction.paymentType === 'cash') {
+        setShopBalance(prev => Number((prev - totalRefund).toFixed(2)));
+      } else if (originalTransaction.paymentType === 'due' || originalTransaction.paymentType === 'partial') {
+        if (originalCustomerId) {
+          setCustomers(prev => prev.map(customer => {
+            if (customer.id !== originalCustomerId) return customer;
+            const normalized = normalizeCustomer(customer);
+            const nextDue = Number(Math.max(0, normalized.dueAmount - totalRefund).toFixed(2));
+            const nextHistory = [...(normalized.paymentHistory || [])];
+            nextHistory.push({
+              id: `return-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              type: 'return',
+              createdAt: new Date().toISOString(),
+              purchaseDate: new Date().toISOString(),
+              invoiceNumber: originalTransaction.id,
+              products: returnItems.map(r => {
+                const originalItem = originalTransaction.items.find(i => i.medicineId === r.medicineId && i.batchNumber === r.batchNumber);
+                return {
+                  medicineId: r.medicineId,
+                  name: originalItem?.name || '',
+                  batchNumber: r.batchNumber,
+                  quantity: r.quantity,
+                  price: originalItem?.price || 0,
+                };
+              }),
+              totalPurchaseAmount: totalRefund,
+              cashPaid: 0,
+              dueCreated: 0,
+              totalOutstandingDue: nextDue,
+              paymentStatus: nextDue <= 0 ? 'Paid' : 'Partial Due'
+            });
+            const rebuilt = summarizeCustomerBalances(nextHistory);
+            return {
+              ...normalized,
+              totalPurchaseAmount: Number((normalized.totalPurchaseAmount - totalRefund).toFixed(2)),
+              dueAmount: rebuilt.dueAmount,
+              totalDue: rebuilt.totalDue,
+              paymentHistory: rebuilt.paymentHistory,
+            };
+          }));
+        }
+      }
+    }
+
+    setMedicines(prev => prev.map(medicine => {
+      const normalized = normalizeMedicineRecord(medicine);
+      const updatedBatches = normalized.batches.map(batch => {
+        const returnItem = returnItems.find(r => r.medicineId === medicine.id && r.batchNumber === batch.batchNumber);
+        if (!returnItem) return batch;
+        return {
+          ...batch,
+          quantity: Number(batch.quantity || 0) + returnItem.quantity,
+        };
+      });
+      return normalizeMedicineRecord({
+        ...normalized,
+        batches: updatedBatches,
+        stock: getMedicineTotalStock({ batches: updatedBatches }),
+      });
+    }));
+
+    const role = currentRoleRef.current || 'Staff';
+    returnRecords.forEach(record => {
+      addInventoryHistoryRecord({
+        medicineName: record.medicineName,
+        companyName: '-',
+        category: '-',
+        animalType: '-',
+        batchNo: record.batchLabel,
+        batchLabel: record.batchLabel,
+        previousStock: 0,
+        addedQuantity: record.returnQuantity,
+        newTotalStock: 0,
+        purchaseCost: 0,
+        sellingPrice: record.refundAmount / record.returnQuantity,
+        totalAmount: record.refundAmount,
+        expiryDate: '-',
+        shelfLocation: '-',
+        addedBy: role,
+        action: 'Return',
+      }, role);
+
+      addMedicineHistoryRecord({
+        medicineId: record.medicineId,
+        medicineName: record.medicineName,
+        genericName: '-',
+        category: '-',
+        animalType: '-',
+        action: 'Returned',
+        previousStock: 0,
+        addedQuantity: record.returnQuantity,
+        currentStock: 0,
+        purchaseCost: 0,
+        sellingPrice: record.refundAmount / record.returnQuantity,
+        expiryDate: '-',
+        shelfLocation: '-',
+        batchNo: record.batchLabel,
+        supplier: '-',
+        notes: `Returned: ${record.reason}`,
+      }, role);
+    });
+  };
+
   const handleAddCompany = (newCompany) => {
     const normalizedCompany = normalizeCompany({
       ...newCompany,
@@ -897,6 +1016,19 @@ function App() {
             onAddCompanyPurchase={handleAddCompanyPurchase}
             onRecordCompanyPayment={handleRecordCompanyPayment}
             onEditCompanyTransaction={handleEditCompanyTransaction}
+            language={language}
+            t={t}
+          />
+        );
+      case 'returns':
+        return (
+          <Returns
+            transactions={transactions}
+            medicines={medicines}
+            customers={customers}
+            returns={returns}
+            onProcessReturn={handleProcessReturn}
+            currentRole={currentRole}
             language={language}
             t={t}
           />
