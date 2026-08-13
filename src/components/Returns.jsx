@@ -79,12 +79,33 @@ export default function Returns({ transactions, medicines, customers, returns, o
     return isBatchExpired(batch);
   };
 
+  const getAlreadyReturnedQty = (item) => {
+    if (!selectedTransaction || !returns.length) return 0;
+    return returns
+      .filter(r => r.originalInvoiceId === selectedTransaction.id && r.medicineId === item.medicineId && r.batchNumber === item.batchNumber)
+      .reduce((sum, r) => sum + (r.returnQuantity || 0), 0);
+  };
+
+  const getAvailableReturnQty = (item) => {
+    const alreadyReturned = getAlreadyReturnedQty(item);
+    return Math.max(0, (item.quantity || 0) - alreadyReturned);
+  };
+
+  const getTotalRefund = () => {
+    if (!selectedTransaction) return 0;
+    return selectedTransaction.items.reduce((sum, item) => {
+      const returnQty = returnItems[item.id] || 0;
+      return sum + (returnQty * (item.price || 0));
+    }, 0);
+  };
+
   const handleReturnQtyChange = (itemId, value) => {
     const item = selectedTransaction?.items.find(i => i.id === itemId);
     if (!item) return;
     const num = parseInt(value) || 0;
     if (num < 0) return;
-    if (num > item.quantity) {
+    const availableQty = getAvailableReturnQty(item);
+    if (num > availableQty) {
       setError(t.returns?.exceedsSoldQuantity || 'Return quantity cannot exceed sold quantity.');
       return;
     }
@@ -371,6 +392,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
                   <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.batch || 'Batch'}</th>
                   <th style={{ textAlign: 'center', padding: '8px' }}>{t.returns?.sold || 'Sold'}</th>
                   <th style={{ textAlign: 'center', padding: '8px' }}>{t.returns?.returnQty || 'Return Qty'}</th>
+                  <th style={{ textAlign: 'center', padding: '8px' }}>Available</th>
                   <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.price || 'Price'}</th>
                   <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.refund || 'Refund'}</th>
                 </tr>
@@ -380,6 +402,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
                   const med = getMedicine(item.medicineId);
                   const isExpired = getBatchExpiryStatus(item.medicineId, item.batchNumber);
                   const returnQty = returnItems[item.id] || 0;
+                  const availableQty = getAvailableReturnQty(item);
                   const refund = Number((returnQty * item.price).toFixed(2));
 
                   return (
@@ -394,20 +417,21 @@ export default function Returns({ transactions, medicines, customers, returns, o
                         <input
                           type="number"
                           min="0"
-                          max={item.quantity}
+                          max={availableQty}
                           className="form-control"
                           style={{ width: '80px', textAlign: 'center' }}
                           value={returnQty}
                           onChange={(e) => handleReturnQtyChange(item.id, e.target.value)}
-                          disabled={isExpired}
+                          disabled={isExpired || availableQty === 0}
                         />
                         {isExpired && <div style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '4px' }}>{t.returns?.cannotReturn || 'Cannot return'}</div>}
                       </td>
+                      <td style={{ textAlign: 'center', padding: '10px 8px' }}>{availableQty}</td>
                       <td style={{ textAlign: 'right', padding: '10px 8px' }}>৳{Number(item.price || 0).toFixed(2)}</td>
                       <td style={{ textAlign: 'right', padding: '10px 8px' }}>৳{refund.toFixed(2)}</td>
                     </tr>
                   );
-                })}
+                })})
               </tbody>
             </table>
 
@@ -427,13 +451,18 @@ export default function Returns({ transactions, medicines, customers, returns, o
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => { setSelectedTransaction(null); setReturnItems({}); setError(''); setSuccess(''); }}>
-                {t.returns?.cancel || 'Cancel'}
-              </button>
-              <button type="button" className="btn btn-primary" onClick={processReturn} disabled={Object.values(returnItems).every(qty => qty === 0)}>
-                {t.returns?.processReturn || 'Process Return'}
-              </button>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {t.returns?.totalRefund || 'Total Refund'}: ৳{getTotalRefund().toFixed(2)}
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setSelectedTransaction(null); setReturnItems({}); setError(''); setSuccess(''); }}>
+                  {t.returns?.cancel || 'Cancel'}
+                </button>
+                <button type="button" className="btn btn-primary" onClick={processReturn} disabled={Object.values(returnItems).every(qty => qty === 0)}>
+                  {t.returns?.processReturn || 'Process Return'}
+                </button>
+              </div>
             </div>
           </div>
         )}
