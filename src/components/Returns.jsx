@@ -120,16 +120,28 @@ export default function Returns({ transactions, medicines, customers, returns, o
     };
   };
 
-  const handleReturnQtyChange = (itemId, value) => {
+  const handleReturnQtyChange = (itemId, rawValue) => {
     const item = selectedTransaction?.items.find(i => i.id === itemId);
     if (!item) return;
-    const num = parseInt(value) || 0;
-    if (num < 0) return;
+
     const availableQty = getAvailableReturnQty(item);
-    if (num > availableQty) {
-      setError(t.returns?.exceedsSoldQuantity || 'Return quantity cannot exceed sold quantity.');
+    if (availableQty <= 0) return;
+
+    const cleaned = String(rawValue).replace(/[^0-9]/g, '');
+    const num = cleaned === '' ? 0 : parseInt(cleaned, 10);
+
+    if (num < 0) {
+      setReturnItems(prev => ({ ...prev, [itemId]: 0 }));
+      setError('');
       return;
     }
+
+    if (num > availableQty) {
+      setError(t.returns?.exceedsSoldQuantity || 'Return quantity cannot exceed sold quantity.');
+      setReturnItems(prev => ({ ...prev, [itemId]: availableQty }));
+      return;
+    }
+
     setError('');
     setReturnItems(prev => ({ ...prev, [itemId]: num }));
   };
@@ -471,6 +483,8 @@ export default function Returns({ transactions, medicines, customers, returns, o
                           type="number"
                           min="0"
                           max={availableQty}
+                          step="1"
+                          inputMode="numeric"
                           className="form-control"
                           style={{ width: '80px', textAlign: 'center' }}
                           value={returnQty}
