@@ -160,19 +160,44 @@ export default function Returns({ transactions, medicines, customers, returns, o
   const getCustomerInvoices = () => {
     if (!selectedCustomer) return [];
     const customerId = selectedCustomer.id;
-    return transactions.filter(tx => {
-      if (!tx || typeof tx !== 'object') return false;
-      if (tx.customer?.id === customerId) return true;
-      if (tx.customer?.name === selectedCustomer.name && tx.customer?.phone === selectedCustomer.phone) return true;
-      if (tx.customerId === customerId) return true;
-      return false;
-    }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  };
 
-  const getCustomerPurchaseHistory = () => {
-    if (!selectedCustomer) return [];
-    const history = (selectedCustomer.paymentHistory || []).filter(entry => entry.type === 'sale');
-    return history.sort((a, b) => new Date(b.purchaseDate || b.createdAt) - new Date(a.purchaseDate || a.createdAt));
+    const historyEntries = (selectedCustomer.paymentHistory || [])
+      .filter(entry => entry.type === 'sale' && entry.invoiceNumber)
+      .sort((a, b) => new Date(b.purchaseDate || b.createdAt) - new Date(a.purchaseDate || a.createdAt));
+
+    const transactionMap = new Map();
+    for (const tx of transactions) {
+      if (!tx || typeof tx !== 'object' || !tx.id) continue;
+      transactionMap.set(tx.id, tx);
+    }
+
+    return historyEntries.map(entry => {
+      const tx = transactionMap.get(entry.invoiceNumber);
+      if (tx) {
+        return tx;
+      }
+      return {
+        id: entry.invoiceNumber,
+        timestamp: entry.purchaseDate || entry.createdAt,
+        items: Array.isArray(entry.products) ? entry.products.map((p, idx) => ({
+          id: p.medicineId || p.id || 'history-' + idx,
+          medicineId: p.medicineId || p.id,
+          name: p.name || 'Unknown',
+          batchNumber: p.batchNumber || '-',
+          batchNo: p.batchNumber || '-',
+          quantity: p.quantity || 0,
+          price: p.price || 0,
+        })) : [],
+        total: entry.totalAmount || entry.totalBill || 0,
+        cashReceived: entry.cashPaid || 0,
+        paymentType: entry.paymentType || 'cash',
+        customer: {
+          id: selectedCustomer.id,
+          name: selectedCustomer.name,
+          phone: selectedCustomer.phone,
+        },
+      };
+    });
   };
 
   const resetAll = () => {
@@ -267,9 +292,8 @@ export default function Returns({ transactions, medicines, customers, returns, o
 
             {(() => {
               const invoices = getCustomerInvoices();
-              const purchaseHistory = getCustomerPurchaseHistory();
 
-              if (invoices.length === 0 && purchaseHistory.length === 0) {
+              if (invoices.length === 0) {
                 return (
                   <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
                     {t.returns?.noPurchaseHistory || 'No purchase history found.'}
@@ -279,7 +303,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
 
               return (
                 <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                  {invoices.length > 0 && invoices.map(tx => (
+                  {invoices.map(tx => (
                     <div
                       key={tx.id}
                       onClick={() => selectInvoice(tx)}
@@ -314,13 +338,6 @@ export default function Returns({ transactions, medicines, customers, returns, o
                       </div>
                     </div>
                   ))}
-                  {invoices.length > 0 && purchaseHistory.length > 0 && (
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
-                        Additional History ({purchaseHistory.length})
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })()}
