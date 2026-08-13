@@ -160,9 +160,19 @@ export default function Returns({ transactions, medicines, customers, returns, o
   const getCustomerInvoices = () => {
     if (!selectedCustomer) return [];
     const customerId = selectedCustomer.id;
-    return transactions.filter(tx => tx.customer?.id === customerId).sort((a, b) => 
-      new Date(b.timestamp) - new Date(a.timestamp)
-    );
+    return transactions.filter(tx => {
+      if (!tx || typeof tx !== 'object') return false;
+      if (tx.customer?.id === customerId) return true;
+      if (tx.customer?.name === selectedCustomer.name && tx.customer?.phone === selectedCustomer.phone) return true;
+      if (tx.customerId === customerId) return true;
+      return false;
+    }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  };
+
+  const getCustomerPurchaseHistory = () => {
+    if (!selectedCustomer) return [];
+    const history = (selectedCustomer.paymentHistory || []).filter(entry => entry.type === 'sale');
+    return history.sort((a, b) => new Date(b.purchaseDate || b.createdAt) - new Date(a.purchaseDate || a.createdAt));
   };
 
   const resetAll = () => {
@@ -255,49 +265,65 @@ export default function Returns({ transactions, medicines, customers, returns, o
               {t.returns?.invoices || 'Invoices'} ({getCustomerInvoices().length})
             </div>
 
-            {getCustomerInvoices().length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                {t.returns?.noInvoices || 'No invoices found for this customer.'}
-              </div>
-            ) : (
-              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                {getCustomerInvoices().map(tx => (
-                  <div 
-                    key={tx.id} 
-                    onClick={() => selectInvoice(tx)}
-                    style={{ 
-                      padding: '12px 16px', 
-                      border: '1px solid var(--border)', 
-                      borderRadius: 'var(--radius-md)', 
-                      marginBottom: '8px', 
-                      cursor: 'pointer',
-                      background: 'var(--bg-secondary)',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tx.id}</span>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-                          {new Date(tx.timestamp).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 600 }}>৳{Number(tx.total || 0).toFixed(2)}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {tx.paymentType === 'cash' ? 'Cash' : tx.paymentType === 'due' ? 'Due' : 'Partial'}
+            {(() => {
+              const invoices = getCustomerInvoices();
+              const purchaseHistory = getCustomerPurchaseHistory();
+
+              if (invoices.length === 0 && purchaseHistory.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                    {t.returns?.noPurchaseHistory || 'No purchase history found.'}
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {invoices.length > 0 && invoices.map(tx => (
+                    <div
+                      key={tx.id}
+                      onClick={() => selectInvoice(tx)}
+                      style={{
+                        padding: '12px 16px',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        marginBottom: '8px',
+                        cursor: 'pointer',
+                        background: 'var(--bg-secondary)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tx.id}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                            {new Date(tx.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 600 }}>৳{Number(tx.total || 0).toFixed(2)}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {tx.paymentType === 'cash' ? 'Cash' : tx.paymentType === 'due' ? 'Due' : 'Partial'}
+                          </div>
                         </div>
                       </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        {tx.items?.length || 0} items
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      {tx.items?.length || 0} items
+                  ))}
+                  {invoices.length > 0 && purchaseHistory.length > 0 && (
+                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
+                        Additional History ({purchaseHistory.length})
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
