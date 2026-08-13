@@ -99,6 +99,27 @@ export default function Returns({ transactions, medicines, customers, returns, o
     }, 0);
   };
 
+  const getRefundBreakdown = () => {
+    if (!selectedTransaction || !selectedCustomer) return null;
+    const returnAmount = getTotalRefund();
+    if (returnAmount === 0) return null;
+
+    const isDueSale = selectedTransaction.paymentType === 'due' || selectedTransaction.paymentType === 'partial';
+    const previousDue = isDueSale ? Number(selectedCustomer.dueAmount || 0) : 0;
+    const dueAdjustment = Math.min(previousDue, returnAmount);
+    const newDue = Math.max(0, previousDue - returnAmount);
+    const cashRefund = returnAmount - dueAdjustment;
+
+    return {
+      returnAmount,
+      previousDue,
+      dueAdjustment,
+      newDue,
+      cashRefund,
+      isDueSale
+    };
+  };
+
   const handleReturnQtyChange = (itemId, value) => {
     const item = selectedTransaction?.items.find(i => i.id === itemId);
     if (!item) return;
@@ -385,6 +406,38 @@ export default function Returns({ transactions, medicines, customers, returns, o
               </div>
             </div>
 
+            {(() => {
+              const breakdown = getRefundBreakdown();
+              if (breakdown) {
+                return (
+                  <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 200px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.returns?.previousDue || 'Previous Due'}</div>
+                      <div style={{ fontWeight: 600 }}>৳{breakdown.previousDue.toFixed(2)}</div>
+                    </div>
+                    <div style={{ flex: '1 1 200px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.returns?.returnAmount || 'Return Amount'}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--accent)' }}>৳{breakdown.returnAmount.toFixed(2)}</div>
+                    </div>
+                    <div style={{ flex: '1 1 200px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.returns?.dueAdjustment || 'Due Adjustment'}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--success)' }}>-৳{breakdown.dueAdjustment.toFixed(2)}</div>
+                    </div>
+                    <div style={{ flex: '1 1 200px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.returns?.newDue || 'New Due'}</div>
+                      <div style={{ fontWeight: 600 }}>৳{breakdown.newDue.toFixed(2)}</div>
+                    </div>
+                    {breakdown.cashRefund > 0 && (
+                      <div style={{ flex: '1 1 200px', background: 'var(--bg-secondary)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t.returns?.cashRefund || 'Cash Refund'}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--danger)' }}>৳{breakdown.cashRefund.toFixed(2)}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>

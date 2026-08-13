@@ -644,7 +644,15 @@ function App() {
           setCustomers(prev => prev.map(customer => {
             if (customer.id !== originalCustomerId) return customer;
             const normalized = normalizeCustomer(customer);
-            const nextDue = Number(Math.max(0, normalized.dueAmount - totalRefund).toFixed(2));
+            const previousDue = Number(normalized.dueAmount || 0);
+            const dueAdjustment = Math.min(previousDue, totalRefund);
+            const newDue = Math.max(0, previousDue - totalRefund);
+            const cashRefund = Number((totalRefund - dueAdjustment).toFixed(2));
+
+            if (cashRefund > 0) {
+              setShopBalance(shopBal => Number((shopBal - cashRefund).toFixed(2)));
+            }
+
             const nextHistory = [...(normalized.paymentHistory || [])];
             nextHistory.push({
               id: `return-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -663,10 +671,10 @@ function App() {
                 };
               }),
               totalPurchaseAmount: totalRefund,
-              cashPaid: 0,
+              cashPaid: cashRefund,
               dueCreated: 0,
-              totalOutstandingDue: nextDue,
-              paymentStatus: nextDue <= 0 ? 'Paid' : 'Partial Due'
+              totalOutstandingDue: newDue,
+              paymentStatus: newDue <= 0 ? 'Paid' : 'Partial Due'
             });
             const rebuilt = summarizeCustomerBalances(nextHistory);
             return {
