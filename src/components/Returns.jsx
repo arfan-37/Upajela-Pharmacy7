@@ -368,10 +368,49 @@ export default function Returns({ transactions, medicines, customers, returns, o
           </div>
         )}
 
-        {!selectedCustomer && !customerResults.length && !selectedTransaction && (
+        {(!selectedCustomer && !customerResults.length && !selectedTransaction && returns.length === 0) && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
             <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>🔍</span>
             <p>{t.returns?.searchHint || 'Search for a customer to view their invoices and process returns.'}</p>
+          </div>
+        )}
+
+        {!selectedCustomer && !customerResults.length && !selectedTransaction && returns.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>{t.returns?.historyTitle || 'Return History'}</h4>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{returns.length} records</span>
+            </div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.customer || 'Customer'}</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.invoice || 'Invoice'}</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.medicine || 'Medicine'}</th>
+                    <th style={{ textAlign: 'center', padding: '8px' }}>{t.returns?.returnQty || 'Qty'}</th>
+                    <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.refund || 'Refund'}</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.reason || 'Reason'}</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.date || 'Date'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {returns.slice(0, 20).map(record => (
+                    <tr key={record.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px' }}>{record.customerName}</td>
+                      <td style={{ padding: '8px' }}>{record.originalInvoiceId}</td>
+                      <td style={{ padding: '8px' }}>{record.medicineName}</td>
+                      <td style={{ textAlign: 'center', padding: '8px' }}>{record.returnQuantity}</td>
+                      <td style={{ textAlign: 'right', padding: '8px' }}>৳{Number(record.refundAmount || 0).toFixed(2)}</td>
+                      <td style={{ padding: '8px', textTransform: 'capitalize' }}>{record.reason}</td>
+                      <td style={{ padding: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {new Date(record.returnDate).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
