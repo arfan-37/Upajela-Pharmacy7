@@ -8,6 +8,8 @@ export default function ReceiptModal({ transaction, onClose, t }) {
     invoiceId: 'Invoice ID:',
     date: 'Date:',
     cashier: 'Cashier:',
+    customerName: 'Customer Name:',
+    phone: 'Phone:',
     medicine: 'Medicine',
     batch: 'Batch',
     qty: 'Qty',
@@ -61,6 +63,12 @@ export default function ReceiptModal({ transaction, onClose, t }) {
             <div><strong>{text.invoiceId}</strong> {transaction.id}</div>
             <div><strong>{text.date}</strong> {formatDate(transaction.timestamp)}</div>
             <div><strong>{text.cashier}</strong> {transaction.salesperson}</div>
+            {transaction.customer?.name && (
+              <div><strong>{text.customerName}</strong> {transaction.customer.name}</div>
+            )}
+            {transaction.customer?.phone && (
+              <div><strong>{text.phone}</strong> {transaction.customer.phone}</div>
+            )}
           </div>
 
           <div className="receipt-divider" />
