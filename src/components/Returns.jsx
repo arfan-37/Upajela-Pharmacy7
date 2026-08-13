@@ -26,6 +26,25 @@ export default function Returns({ transactions, medicines, customers, returns, o
     setCustomerResults(filtered);
   };
 
+  const handleCustomerSearchChange = (value) => {
+    setCustomerSearch(value);
+    setSelectedCustomer(null);
+    setSelectedTransaction(null);
+    setReturnItems({});
+    setError('');
+    setSuccess('');
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) {
+      setCustomerResults([]);
+      return;
+    }
+    const filtered = customers.filter(c => 
+      c.name.toLowerCase().includes(trimmed) || 
+      c.phone.includes(trimmed)
+    );
+    setCustomerResults(filtered);
+  };
+
   const selectCustomer = (customer) => {
     setSelectedCustomer(customer);
     setCustomerResults([]);
@@ -173,7 +192,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
                 className="form-control"
                 placeholder={t.returns?.customerPlaceholder || 'Enter customer name or mobile number...'}
                 value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
+                onChange={(e) => handleCustomerSearchChange(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchCustomer(); } }}
               />
               <button type="button" className="btn btn-primary" onClick={searchCustomer}>
@@ -183,11 +202,13 @@ export default function Returns({ transactions, medicines, customers, returns, o
           </div>
         )}
 
-        {customerResults.length > 0 && !selectedCustomer && (
+        {!selectedCustomer && customerSearch.trim() && (
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-              {t.returns?.searchResults || 'Search Results'} ({customerResults.length})
-            </div>
+            {customerResults.length > 0 ? (
+              <>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  {t.returns?.searchResults || 'Search Results'} ({customerResults.length})
+                </div>
             {customerResults.map(customer => (
               <div 
                 key={customer.id} 
@@ -207,7 +228,13 @@ export default function Returns({ transactions, medicines, customers, returns, o
                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{customer.name}</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📱 {customer.phone}</div>
               </div>
-            ))}
+              ))}
+            </>
+          ) : (
+            <div style={{ padding: '12px 16px', color: 'var(--danger)', fontSize: '13px', fontWeight: 600 }}>
+              {t.returns?.noCustomerFound || 'This customer is not existing.'}
+            </div>
+          )}
           </div>
         )}
 
