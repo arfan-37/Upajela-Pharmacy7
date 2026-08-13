@@ -30,6 +30,7 @@ export const translations = {
     sidebar: {
       dashboard: 'Dashboard',
       pos: 'POS Billing',
+      returns: 'Return',
       customers: 'Customers',
       inventory: 'Inventory',
       reports: 'Financial Reports',
@@ -647,6 +648,7 @@ export const translations = {
     sidebar: {
       dashboard: 'ড্যাশবোর্ড',
       pos: 'পিওএস বিলিং',
+      returns: 'রিটার্ন',
       customers: 'গ্রাহক',
       inventory: 'ইনভেন্টরি',
       reports: 'আর্থিক রিপোর্ট',
