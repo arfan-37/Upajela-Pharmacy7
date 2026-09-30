@@ -250,8 +250,10 @@ export default function CustomerPanel({ customers, shopBalance, onAddCustomer, o
       return;
     }
 
+    // FIX: Track payment amount separately to avoid nested setShopBalance calls
+    let paymentDelta = amount;
     setPaymentError('');
-    onReceivePayment(paymentCustomerId, amount, paymentDate || new Date().toISOString());
+    onReceivePayment(paymentCustomerId, amount, paymentDate || new Date().toISOString(), paymentDelta);
     closePayment();
   };
 

@@ -9,25 +9,52 @@ import Login from './components/Login';
 import CustomerPanel from './components/CustomerPanel';
 import CompanyPanel from './components/CompanyPanel';
 import Returns from './components/Returns';
-import { initialMedicines, initialTransactions, initialCompanies, initialCustomers } from './utils/mockData';
+import ErrorBoundary from './components/ErrorBoundary';
+import Toast from './components/Toast';
+import { translations } from './utils/translations';
+import { generateDailyReport } from './utils/financialReports';
 import { rebuildCustomerHistoryTimeline, summarizeCustomerBalances } from './utils/customerHistory';
 import { rebuildCompanyTransactionTimeline, summarizeCompanyBalances } from './utils/companyHistory';
-import { addCompanyHistoryRecord, addInventoryHistoryRecord } from './utils/historyUtils';
-import { addMedicineHistoryRecord } from './utils/medicineHistoryUtils';
 import { formatBatchLabel, normalizeMedicineRecord, isBatchExpired, getMedicineTotalStock, getMedicineBatches } from './utils/inventoryBatchUtils';
-import { translations } from './utils/translations';
+import { useToast } from './utils/toast';
+import {
+  getAllMedicines,
+  upsertMany as upsertMedicines,
+  getAllBatches,
+  deleteMedicine,
+} from './lib/repositories/medicinesRepo.js';
+import {
+  getAllTransactions,
+  insertMany as insertTransactions,
+  upsertMany as upsertTransactions,
+} from './lib/repositories/transactionsRepo.js';
+import {
+  getAllCustomers,
+  upsertMany as upsertCustomers,
+  deleteCustomer,
+} from './lib/repositories/customersRepo.js';
+import {
+  getAllCompanies,
+  upsertMany as upsertCompanies,
+  deleteCompany,
+  insertCompanyTransaction,
+} from './lib/repositories/companiesRepo.js';
+import {
+  getAllReturns,
+  upsertMany as upsertReturns,
+  insertReturn,
+} from './lib/repositories/returnsRepo.js';
+import {
+  getShopBalance,
+  setShopBalance,
+} from './lib/repositories/shopBalanceRepo.js';
+import { insertInventoryHistory } from './lib/repositories/inventoryHistoryRepo.js';
+import { insertCompanyHistory } from './lib/repositories/companyHistoryRepo.js';
+import { insertMedicineHistory } from './lib/repositories/medicineHistoryRepo.js';
+import { upsertFinancialReport } from './lib/repositories/financialReportsRepo.js';
+import { addInventoryHistoryRecord, addCompanyHistoryRecord } from './utils/historyUtils';
+import { addMedicineHistoryRecord } from './utils/medicineHistoryUtils';
 import './App.css';
-
-const readStoredJson = (key, fallback) => {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved === null) return fallback;
-    return JSON.parse(saved);
-  } catch (error) {
-    console.warn(`Failed to parse localStorage item "${key}"`, error);
-    return fallback;
-  }
-};
 
 const buildTransactionIndex = (transactions) => {
   const index = new Map();
@@ -72,7 +99,6 @@ const enrichSaleHistoryEntries = (customer, transactionIndex) => {
     return entry;
   });
 
-  // Also enrich dueEntries with product info via invoiceNumber lookup
   const enrichedDueEntries = (Array.isArray(customer?.dueEntries) ? customer.dueEntries : []).map((entry) => {
     if (entry && entry.type === 'sale') {
       const hasMissingProducts = !Array.isArray(entry.products) || entry.products.length === 0;
@@ -149,29 +175,6 @@ const normalizeCompany = (company) => {
   };
 };
 
-const mergeSeedRecords = (savedRecords, seedRecords) => {
-  const merged = new Map();
-
-  const addRecord = (record) => {
-    if (!record || typeof record !== 'object') return;
-
-    const recordId = record.id;
-    if (recordId === undefined || recordId === null || recordId === '') return;
-
-    merged.set(String(recordId), record);
-  };
-
-  for (const record of Array.isArray(seedRecords) ? seedRecords : []) {
-    addRecord(record);
-  }
-
-  for (const record of Array.isArray(savedRecords) ? savedRecords : []) {
-    addRecord(record);
-  }
-
-  return [...merged.values()];
-};
-
 // Attach the current local time to a (possibly date-only) value so every
 // history record stores a full Date+Time timestamp. Used for sorting + display.
 const withTime = (value) => {
@@ -211,65 +214,102 @@ function App() {
     }
   };
 
-  // Global States (preserves state across browser tabs using localStorage)
-  const [medicines, setMedicines] = useState(() => {
-    return readStoredJson('shabab_medicines', initialMedicines).map(normalizeMedicineRecord);
-  });
+  const { toast, hide: hideToast, notify } = useToast();
 
-  const [transactions, setTransactions] = useState(() => {
-    return readStoredJson('shabab_transactions', initialTransactions);
-  });
-
-  const [customers, setCustomers] = useState(() => {
-    const parsed = readStoredJson('shabab_customers', []);
-    const merged = mergeSeedRecords(parsed, initialCustomers);
-    const storedTransactions = readStoredJson('shabab_transactions', initialTransactions);
-    const transactionIndex = buildTransactionIndex([...storedTransactions, ...initialTransactions]);
-    return merged.map((c) => cleanupCustomer(c, transactionIndex));
-  });
-
-  const [companies, setCompanies] = useState(() => {
-    const parsed = readStoredJson('shabab_companies', initialCompanies);
-    const resolved = Array.isArray(parsed) && parsed.length > 0 ? parsed : initialCompanies;
-    return resolved.map(normalizeCompany);
-  });
-
-  const [shopBalance, setShopBalance] = useState(() => {
-    const saved = localStorage.getItem('shabab_shop_balance');
-    return saved ? Number(saved) : 0;
-  });
-
-  const [returns, setReturns] = useState(() => {
-    const saved = localStorage.getItem('shabab_returns');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  // Global States
+  const [medicines, setMedicines] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [shopBalance, setShopBalance] = useState(0);
+  const [returns, setReturns] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [inventoryFilter, setInventoryFilter] = useState('All');
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Persist states to Local Storage on change
+  // Load data from Supabase on mount
   useEffect(() => {
-    localStorage.setItem('shabab_returns', JSON.stringify(returns));
-  }, [returns]);
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const [
+          meds,
+          txs,
+          custs,
+          comps,
+          rets,
+          balance,
+        ] = await Promise.all([
+          getAllMedicines().catch((e) => { console.warn('Failed to load medicines', e); return []; }),
+          getAllTransactions().catch((e) => { console.warn('Failed to load transactions', e); return []; }),
+          getAllCustomers().catch((e) => { console.warn('Failed to load customers', e); return []; }),
+          getAllCompanies().catch((e) => { console.warn('Failed to load companies', e); return []; }),
+          getAllReturns().catch((e) => { console.warn('Failed to load returns', e); return []; }),
+          getShopBalance().catch((e) => { console.warn('Failed to load shop balance', e); return 0; }),
+        ]);
+
+        if (cancelled) return;
+
+        console.log('[DEBUG] Loaded medicines count:', meds.length);
+        console.log('[DEBUG] Sample medicine:', meds[0]);
+        setMedicines(meds.map(normalizeMedicineRecord));
+        setTransactions(txs);
+        setCustomers(custs.map((c) => cleanupCustomer(c, buildTransactionIndex(txs))));
+        setCompanies(comps.map(normalizeCompany));
+        setReturns(rets);
+        setShopBalance(Number(balance || 0));
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Failed to load data from Supabase', error);
+        if (cancelled) return;
+        setMedicines([]);
+        setTransactions([]);
+        setCustomers([]);
+        setCompanies([]);
+        setShopBalance(0);
+        setReturns([]);
+        setDataLoaded(true);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Sync state changes to Supabase after initial load
   useEffect(() => {
-    localStorage.setItem('shabab_medicines', JSON.stringify(medicines));
-  }, [medicines]);
+    if (!dataLoaded) return;
+    upsertMedicines(medicines);
+  }, [dataLoaded, medicines]);
 
   useEffect(() => {
-    localStorage.setItem('shabab_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    if (!dataLoaded) return;
+    upsertTransactions(transactions);
+  }, [dataLoaded, transactions]);
 
   useEffect(() => {
-    localStorage.setItem('shabab_customers', JSON.stringify(customers));
-  }, [customers]);
+    if (!dataLoaded) return;
+    upsertCustomers(customers);
+  }, [dataLoaded, customers]);
 
   useEffect(() => {
-    localStorage.setItem('shabab_companies', JSON.stringify(companies));
-  }, [companies]);
+    if (!dataLoaded) return;
+    upsertCompanies(companies);
+  }, [dataLoaded, companies]);
 
   useEffect(() => {
-    localStorage.setItem('shabab_shop_balance', String(shopBalance));
-  }, [shopBalance]);
+    if (!dataLoaded) return;
+    upsertReturns(returns);
+  }, [dataLoaded, returns]);
+
+  useEffect(() => {
+    if (!dataLoaded) return;
+    setShopBalance(shopBalance);
+  }, [dataLoaded, shopBalance]);
 
   useEffect(() => {
     localStorage.setItem('shabab_language', language);
@@ -298,20 +338,40 @@ function App() {
   };
 
   // Inventory Management State Mutation handlers
-  const handleAddMedicine = (newMed) => {
-    setMedicines(prev => [normalizeMedicineRecord(newMed), ...prev]);
+  const handleAddMedicine = async (newMed) => {
+    try {
+      const normalized = normalizeMedicineRecord(newMed);
+      await upsertMedicines([normalized]);
+      setMedicines(prev => [normalized, ...prev]);
+    } catch (error) {
+      console.error('Failed to add medicine to Supabase:', error);
+      notify(error?.message || 'Failed to add medicine. Please try again.', 'error');
+    }
   };
 
-  const handleUpdateMedicine = (updatedMed) => {
-    setMedicines(prev => prev.map(m => (
-      m.id === updatedMed.id
-        ? normalizeMedicineRecord({ ...m, ...updatedMed, batches: updatedMed.batches || m.batches })
-        : m
-    )));
+  const handleUpdateMedicine = async (updatedMed) => {
+    try {
+      const normalized = normalizeMedicineRecord({ ...updatedMed, batches: updatedMed.batches || [] });
+      await upsertMedicines([normalized]);
+      setMedicines(prev => prev.map(m => (
+        m.id === normalized.id
+          ? normalized
+          : m
+      )));
+    } catch (error) {
+      console.error('Failed to update medicine in Supabase:', error);
+      notify(error?.message || 'Failed to update medicine. Please try again.', 'error');
+    }
   };
 
-  const handleDeleteMedicine = (id) => {
-    setMedicines(prev => prev.filter(m => m.id !== id));
+  const handleDeleteMedicine = async (id) => {
+    try {
+      await deleteMedicine(id);
+      setMedicines(prev => prev.filter(m => m.id !== id));
+    } catch (error) {
+      console.error('Failed to delete medicine from Supabase:', error);
+      notify(error?.message || 'Failed to delete medicine. Please try again.', 'error');
+    }
   };
 
   // Stock reduction when items are sold in POS
@@ -488,29 +548,56 @@ function App() {
   };
 
   // Append new transactions from checkout flow
-  const handleCheckoutSuccess = (newTx) => {
-    setTransactions(prev => [newTx, ...prev]);
+  const handleCheckoutSuccess = async (newTx) => {
+    try {
+      await upsertTransactions([newTx]);
+      setTransactions(prev => [newTx, ...prev]);
+    } catch (error) {
+      console.error('Failed to save transaction to Supabase:', error);
+      notify(error?.message || 'Failed to save transaction. Please try again.', 'error');
+    }
   };
 
-  const handleAddCustomer = (newCustomer) => {
-    const normalizedCustomer = normalizeCustomer({
-      ...newCustomer,
-      createdAt: newCustomer.createdAt || new Date().toISOString()
-    });
-    setCustomers(prev => [normalizedCustomer, ...prev]);
+  const handleAddCustomer = async (newCustomer) => {
+    try {
+      const normalizedCustomer = normalizeCustomer({
+        ...newCustomer,
+        createdAt: newCustomer.createdAt || new Date().toISOString()
+      });
+      await upsertCustomers([normalizedCustomer]);
+      setCustomers(prev => [normalizedCustomer, ...prev]);
+    } catch (error) {
+      console.error('Failed to add customer to Supabase:', error);
+      notify(error?.message || 'Failed to add customer. Please try again.', 'error');
+    }
   };
 
-  const handleUpdateCustomer = (updatedCustomer) => {
-    const normalizedCustomer = normalizeCustomer(updatedCustomer);
-    setCustomers(prev => prev.map(customer => customer.id === normalizedCustomer.id ? normalizedCustomer : customer));
+  const handleUpdateCustomer = async (updatedCustomer) => {
+    try {
+      const normalizedCustomer = normalizeCustomer(updatedCustomer);
+      await upsertCustomers([normalizedCustomer]);
+      setCustomers(prev => prev.map(customer => customer.id === normalizedCustomer.id ? normalizedCustomer : customer));
+    } catch (error) {
+      console.error('Failed to update customer in Supabase:', error);
+      notify(error?.message || 'Failed to update customer. Please try again.', 'error');
+    }
   };
 
-  const handleDeleteCustomer = (id) => {
-    setCustomers(prev => prev.filter(customer => customer.id !== id));
+  const handleDeleteCustomer = async (id) => {
+    try {
+        await deleteCustomer(id);
+        setCustomers(prev => prev.filter(customer => customer.id !== id));
+    } catch (error) {
+      console.error('Failed to delete customer from Supabase:', error);
+      notify(error?.message || 'Failed to delete customer. Please try again.', 'error');
+    }
   };
 
-  const handleRecordCustomerSale = (customerId, saleSummary) => {
-    setCustomers(prev => prev.map(customer => {
+  const handleRecordCustomerSale = async (customerId, saleSummary) => {
+    let updatedCustomers = [];
+    let shopBalanceDelta = 0;
+
+    updatedCustomers = customers.map(customer => {
       if (customer.id !== customerId) return customer;
 
       const normalizedCustomer = normalizeCustomer(customer);
@@ -556,9 +643,7 @@ function App() {
         paymentStatus: overallDueAfterSale <= 0 ? 'Paid' : cashAmount > 0 ? 'Partial Due' : 'Full Due'
       };
 
-      if (cashAmount > 0) {
-        setShopBalance(prev => Number((prev + cashAmount).toFixed(2)));
-      }
+      shopBalanceDelta += cashAmount;
 
       return {
         ...normalizedCustomer,
@@ -569,11 +654,27 @@ function App() {
         dueEntries: nextEntries,
         paymentHistory: rebuildCustomerHistoryTimeline([...(normalizedCustomer.paymentHistory || []), paymentHistoryEntry])
       };
-    }));
+    });
+
+    try {
+      await upsertCustomers(updatedCustomers);
+      setCustomers(updatedCustomers);
+      if (shopBalanceDelta > 0) {
+        const newBalance = Number((shopBalance + shopBalanceDelta).toFixed(2));
+        await setShopBalance(newBalance);
+        setShopBalance(newBalance);
+      }
+    } catch (error) {
+      console.error('Failed to record customer sale in Supabase:', error);
+      notify(error?.message || 'Failed to record customer sale. Please try again.', 'error');
+    }
   };
 
-  const handleReceivePayment = (customerId, amount, paymentDate) => {
-    setCustomers(prev => prev.map(customer => {
+  const handleReceivePayment = async (customerId, amount, paymentDate, paymentDelta = 0) => {
+    let updatedCustomers = [];
+    let shopBalanceDelta = paymentDelta;
+    
+    updatedCustomers = customers.map(customer => {
       if (customer.id !== customerId) return customer;
 
       const normalizedCustomer = normalizeCustomer(customer);
@@ -617,8 +718,6 @@ function App() {
       nextHistory.push(paymentEntry);
       const rebuiltSummary = summarizeCustomerBalances(nextHistory);
 
-      setShopBalance(prev => Number((prev + paymentAmount).toFixed(2)));
-
       return {
         ...normalizedCustomer,
         cashPaid: Number((normalizedCustomer.cashPaid + paymentAmount).toFixed(2)),
@@ -627,173 +726,246 @@ function App() {
         dueEntries: nextEntries,
         paymentHistory: rebuiltSummary.paymentHistory
       };
-    }));
+    });
+
+    try {
+      await upsertCustomers(updatedCustomers);
+      setCustomers(updatedCustomers);
+      if (shopBalanceDelta > 0) {
+        const newBalance = Number((shopBalance + shopBalanceDelta).toFixed(2));
+        await setShopBalance(newBalance);
+        setShopBalance(newBalance);
+      }
+    } catch (error) {
+      console.error('Failed to record customer payment in Supabase:', error);
+      notify(error?.message || 'Failed to record customer payment. Please try again.', 'error');
+    }
   };
 
-  const handleProcessReturn = ({ returns: returnRecords, originalTransaction, returnItems }) => {
-    setReturns(prev => [...returnRecords, ...prev]);
+  const handleProcessReturn = async ({ returns: returnRecords, originalTransaction, returnItems }) => {
+    try {
+      const updatedReturns = [...returnRecords, ...returns];
+      const totalRefund = returnRecords.reduce((sum, r) => sum + r.refundAmount, 0);
+      const originalCustomerId = originalTransaction.customer?.id;
+      let updatedCustomers = customers;
+      let updatedMedicines = medicines;
+      let shopBalanceDelta = 0;
 
-    const totalRefund = returnRecords.reduce((sum, r) => sum + r.refundAmount, 0);
-    const originalCustomerId = originalTransaction.customer?.id;
+      if (totalRefund > 0) {
+        if (originalTransaction.paymentType === 'cash') {
+          shopBalanceDelta -= totalRefund;
+        } else if (originalTransaction.paymentType === 'due' || originalTransaction.paymentType === 'partial') {
+          if (originalCustomerId) {
+            updatedCustomers = customers.map(customer => {
+              if (customer.id !== originalCustomerId) return customer;
+              const normalized = normalizeCustomer(customer);
+              const previousDue = Number(normalized.dueAmount || 0);
+              const dueAdjustment = Math.min(previousDue, totalRefund);
+              const newDue = Math.max(0, previousDue - totalRefund);
+              const cashRefund = Number((totalRefund - dueAdjustment).toFixed(2));
 
-    if (totalRefund > 0) {
-      if (originalTransaction.paymentType === 'cash') {
-        setShopBalance(prev => Number((prev - totalRefund).toFixed(2)));
-      } else if (originalTransaction.paymentType === 'due' || originalTransaction.paymentType === 'partial') {
-        if (originalCustomerId) {
-          setCustomers(prev => prev.map(customer => {
-            if (customer.id !== originalCustomerId) return customer;
-            const normalized = normalizeCustomer(customer);
-            const previousDue = Number(normalized.dueAmount || 0);
-            const dueAdjustment = Math.min(previousDue, totalRefund);
-            const newDue = Math.max(0, previousDue - totalRefund);
-            const cashRefund = Number((totalRefund - dueAdjustment).toFixed(2));
+              if (cashRefund > 0) {
+                shopBalanceDelta -= cashRefund;
+              }
 
-            if (cashRefund > 0) {
-              setShopBalance(shopBal => Number((shopBal - cashRefund).toFixed(2)));
-            }
-
-            const nextHistory = [...(normalized.paymentHistory || [])];
-            nextHistory.push({
-              id: `return-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-              type: 'return',
-              createdAt: new Date().toISOString(),
-              purchaseDate: new Date().toISOString(),
-              invoiceNumber: originalTransaction.id,
-              products: returnItems.map(r => {
-                const originalItem = originalTransaction.items.find(i => i.medicineId === r.medicineId && i.batchNumber === r.batchNumber);
-                return {
-                  medicineId: r.medicineId,
-                  name: originalItem?.name || '',
-                  batchNumber: r.batchNumber,
-                  quantity: r.quantity,
-                  price: originalItem?.price || 0,
-                };
-              }),
-              totalPurchaseAmount: totalRefund,
-              cashPaid: cashRefund,
-              dueCreated: 0,
-              totalOutstandingDue: newDue,
-              paymentStatus: newDue <= 0 ? 'Paid' : 'Partial Due'
+              const nextHistory = [...(normalized.paymentHistory || [])];
+              nextHistory.push({
+                id: `return-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                type: 'return',
+                createdAt: new Date().toISOString(),
+                purchaseDate: new Date().toISOString(),
+                invoiceNumber: originalTransaction.id,
+                products: returnItems.map(r => {
+                  const originalItem = originalTransaction.items.find(i => i.medicineId === r.medicineId && i.batchNumber === r.batchNumber);
+                  return {
+                    medicineId: r.medicineId,
+                    name: originalItem?.name || '',
+                    batchNumber: r.batchNumber,
+                    quantity: r.quantity,
+                    price: originalItem?.price || 0,
+                  };
+                }),
+                totalPurchaseAmount: totalRefund,
+                cashPaid: cashRefund,
+                dueCreated: 0,
+                totalOutstandingDue: newDue,
+                paymentStatus: newDue <= 0 ? 'Paid' : 'Partial Due'
+              });
+              const rebuilt = summarizeCustomerBalances(nextHistory);
+              return {
+                ...normalized,
+                totalPurchaseAmount: Number((normalized.totalPurchaseAmount - totalRefund).toFixed(2)),
+                dueAmount: newDue,
+                totalDue: newDue,
+                paymentHistory: rebuilt.paymentHistory,
+              };
             });
-            const rebuilt = summarizeCustomerBalances(nextHistory);
-            return {
-              ...normalized,
-              totalPurchaseAmount: Number((normalized.totalPurchaseAmount - totalRefund).toFixed(2)),
-              dueAmount: rebuilt.dueAmount,
-              totalDue: rebuilt.totalDue,
-              paymentHistory: rebuilt.paymentHistory,
-            };
-          }));
+          }
         }
       }
+
+      updatedMedicines = medicines.map(medicine => {
+        const normalized = normalizeMedicineRecord(medicine);
+        const updatedBatches = normalized.batches.map(batch => {
+          const returnItem = returnItems.find(r => r.medicineId === medicine.id && r.batchNumber === batch.batchNumber);
+          if (!returnItem) return batch;
+          return {
+            ...batch,
+            quantity: Number(batch.quantity || 0) + returnItem.quantity,
+          };
+        });
+        return normalizeMedicineRecord({
+          ...normalized,
+          batches: updatedBatches,
+          stock: getMedicineTotalStock({ batches: updatedBatches }),
+        });
+      });
+
+      await upsertReturns(updatedReturns);
+      setReturns(updatedReturns);
+
+      if (updatedCustomers !== customers) {
+        await upsertCustomers(updatedCustomers);
+        setCustomers(updatedCustomers);
+      }
+      await upsertMedicines(updatedMedicines);
+      setMedicines(updatedMedicines);
+
+      if (shopBalanceDelta !== 0) {
+        const newBalance = Number((shopBalance + shopBalanceDelta).toFixed(2));
+        await setShopBalance(newBalance);
+        setShopBalance(newBalance);
+      }
+
+      const role = currentRoleRef.current || 'Staff';
+      returnRecords.forEach(record => {
+        const medicine = medicines.find(m => m.id === record.medicineId);
+        const previousStock = medicine ? getMedicineTotalStock({ batches: medicine.batches }) : 0;
+        const newStock = previousStock + Number(record.returnQuantity);
+
+        addInventoryHistoryRecord({
+          medicineName: record.medicineName,
+          companyName: '-',
+          category: '-',
+          animalType: '-',
+          batchNo: record.batchLabel,
+          batchLabel: record.batchLabel,
+          previousStock,
+          addedQuantity: record.returnQuantity,
+          newTotalStock: newStock,
+          purchaseCost: 0,
+          sellingPrice: record.refundAmount / record.returnQuantity,
+          totalAmount: record.refundAmount,
+          expiryDate: '-',
+          shelfLocation: '-',
+          addedBy: role,
+          action: 'Return',
+        }, role);
+
+        addMedicineHistoryRecord({
+          medicineId: record.medicineId,
+          medicineName: record.medicineName,
+          genericName: '-',
+          category: '-',
+          animalType: '-',
+          action: 'Returned',
+          previousStock,
+          addedQuantity: record.returnQuantity,
+          currentStock: newStock,
+          purchaseCost: 0,
+          sellingPrice: record.refundAmount / record.returnQuantity,
+          expiryDate: '-',
+          shelfLocation: '-',
+          batchNo: record.batchLabel,
+          supplier: '-',
+          notes: `Returned: ${record.reason}`,
+        }, role);
+      });
+
+      if (returnRecords.length > 0) {
+        await generateDailyReport(
+          new Date().toISOString().slice(0, 10),
+          transactions,
+          medicines,
+          customers,
+          companies,
+          updatedReturns
+        );
+      }
+    } catch (error) {
+      console.error('Failed to process return in Supabase:', error);
+      notify(error?.message || 'Failed to process return. Please try again.', 'error');
     }
+  };
 
-    setMedicines(prev => prev.map(medicine => {
-      const normalized = normalizeMedicineRecord(medicine);
-      const updatedBatches = normalized.batches.map(batch => {
-        const returnItem = returnItems.find(r => r.medicineId === medicine.id && r.batchNumber === batch.batchNumber);
-        if (!returnItem) return batch;
-        return {
-          ...batch,
-          quantity: Number(batch.quantity || 0) + returnItem.quantity,
-        };
+  const handleAddCompany = async (newCompany) => {
+    try {
+      const normalizedCompany = normalizeCompany({
+        ...newCompany,
+        transactionHistory: rebuildCompanyTransactionTimeline(Array.isArray(newCompany.transactionHistory) ? newCompany.transactionHistory : [])
       });
-      return normalizeMedicineRecord({
-        ...normalized,
-        batches: updatedBatches,
-        stock: getMedicineTotalStock({ batches: updatedBatches }),
-      });
-    }));
+      await upsertCompanies([normalizedCompany]);
+      setCompanies(prev => [normalizedCompany, ...prev]);
 
-    const role = currentRoleRef.current || 'Staff';
-    returnRecords.forEach(record => {
-      addInventoryHistoryRecord({
-        medicineName: record.medicineName,
-        companyName: '-',
-        category: '-',
-        animalType: '-',
-        batchNo: record.batchLabel,
-        batchLabel: record.batchLabel,
-        previousStock: 0,
-        addedQuantity: record.returnQuantity,
-        newTotalStock: 0,
-        purchaseCost: 0,
-        sellingPrice: record.refundAmount / record.returnQuantity,
-        totalAmount: record.refundAmount,
-        expiryDate: '-',
-        shelfLocation: '-',
+      const role = currentRoleRef.current || 'Staff';
+      addCompanyHistoryRecord({
+        companyName: normalizedCompany.name,
+        medicineNames: '-',
+        quantity: 0,
+        totalAmount: 0,
+        amountPaid: 0,
+        remainingPayable: 0,
+        paymentStatus: 'Paid',
         addedBy: role,
-        action: 'Return',
       }, role);
+    } catch (error) {
+      console.error('Failed to add company to Supabase:', error);
+      notify(error?.message || 'Failed to add company. Please try again.', 'error');
+    }
+  };
 
-      addMedicineHistoryRecord({
-        medicineId: record.medicineId,
-        medicineName: record.medicineName,
-        genericName: '-',
-        category: '-',
-        animalType: '-',
-        action: 'Returned',
-        previousStock: 0,
-        addedQuantity: record.returnQuantity,
-        currentStock: 0,
-        purchaseCost: 0,
-        sellingPrice: record.refundAmount / record.returnQuantity,
-        expiryDate: '-',
-        shelfLocation: '-',
-        batchNo: record.batchLabel,
-        supplier: '-',
-        notes: `Returned: ${record.reason}`,
+  const handleUpdateCompany = async (updatedCompany) => {
+    try {
+      const normalizedCompany = normalizeCompany(updatedCompany);
+      await upsertCompanies([normalizedCompany]);
+      setCompanies(prev => prev.map(company => company.id === normalizedCompany.id ? normalizedCompany : company));
+
+      const role = currentRoleRef.current || 'Staff';
+      addCompanyHistoryRecord({
+        companyName: normalizedCompany.name,
+        medicineNames: '-',
+        quantity: 0,
+        totalAmount: 0,
+        amountPaid: 0,
+        remainingPayable: 0,
+        paymentStatus: 'Paid',
+        addedBy: role,
       }, role);
-    });
+    } catch (error) {
+      console.error('Failed to update company in Supabase:', error);
+      notify(error?.message || 'Failed to update company. Please try again.', 'error');
+    }
   };
 
-  const handleAddCompany = (newCompany) => {
-    const normalizedCompany = normalizeCompany({
-      ...newCompany,
-      transactionHistory: rebuildCompanyTransactionTimeline(Array.isArray(newCompany.transactionHistory) ? newCompany.transactionHistory : [])
-    });
-    setCompanies(prev => [normalizedCompany, ...prev]);
-
-    const role = currentRoleRef.current || 'Staff';
-    addCompanyHistoryRecord({
-      companyName: normalizedCompany.name,
-      medicineNames: '-',
-      quantity: 0,
-      totalAmount: 0,
-      amountPaid: 0,
-      remainingPayable: 0,
-      paymentStatus: 'Paid',
-      addedBy: role,
-    }, role);
+  const handleDeleteCompany = async (id) => {
+    try {
+      await deleteCompany(id);
+      setCompanies(prev => prev.filter(company => company.id !== id));
+    } catch (error) {
+      console.error('Failed to delete company from Supabase:', error);
+      notify(error?.message || 'Failed to delete company. Please try again.', 'error');
+    }
   };
 
-  const handleUpdateCompany = (updatedCompany) => {
-    const normalizedCompany = normalizeCompany(updatedCompany);
-    setCompanies(prev => prev.map(company => company.id === normalizedCompany.id ? normalizedCompany : company));
+  const handleAddCompanyPurchase = async (companyId, summary) => {
+    try {
+      const updatedCompany = companies.find(c => c.id === companyId);
+      if (!updatedCompany) {
+        notify('Company not found.', 'error');
+        return;
+      }
 
-    const role = currentRoleRef.current || 'Staff';
-    addCompanyHistoryRecord({
-      companyName: normalizedCompany.name,
-      medicineNames: '-',
-      quantity: 0,
-      totalAmount: 0,
-      amountPaid: 0,
-      remainingPayable: 0,
-      paymentStatus: 'Paid',
-      addedBy: role,
-    }, role);
-  };
-
-  const handleDeleteCompany = (id) => {
-    setCompanies(prev => prev.filter(company => company.id !== id));
-  };
-
-  const handleAddCompanyPurchase = (companyId, summary) => {
-    setCompanies(prev => prev.map(company => {
-      if (company.id !== companyId) return company;
-
-      const normalizedCompany = normalizeCompany(company);
+      const normalizedCompany = normalizeCompany(updatedCompany);
       const totalAmount = Number(summary?.totalAmount || 0);
       const amountPaid = Number(summary?.amountPaid || 0);
       const purchaseDate = summary?.purchaseDate || new Date().toISOString();
@@ -811,7 +983,15 @@ function App() {
         paymentDate: amountPaid >= totalAmount ? purchaseDate : null,
         totalOutstandingDue: Number((normalizedCompany.dueAmount + Math.max(0, totalAmount - amountPaid)).toFixed(2))
       };
+
       const rebuilt = summarizeCompanyBalances([...(normalizedCompany.transactionHistory || []), purchaseTx]);
+      const newCompanyState = {
+        ...normalizedCompany,
+        totalPurchaseAmount: rebuilt.totalPurchaseAmount,
+        amountPaid: rebuilt.amountPaid,
+        dueAmount: rebuilt.dueAmount,
+        transactionHistory: rebuilt.transactionHistory
+      };
 
       const role = currentRoleRef.current || 'Staff';
       const medicineNames = Array.isArray(summary?.products)
@@ -822,7 +1002,7 @@ function App() {
         : 0;
 
       addCompanyHistoryRecord({
-        companyName: company.name,
+        companyName: updatedCompany.name,
         medicineNames,
         quantity,
         totalAmount,
@@ -832,21 +1012,39 @@ function App() {
         addedBy: role,
       }, role);
 
-      return {
-        ...normalizedCompany,
-        totalPurchaseAmount: rebuilt.totalPurchaseAmount,
-        amountPaid: rebuilt.amountPaid,
-        dueAmount: rebuilt.dueAmount,
-        transactionHistory: rebuilt.transactionHistory
+      await upsertCompanies([newCompanyState]);
+      setCompanies(prev => prev.map(c => c.id === companyId ? newCompanyState : c));
+
+      const purchaseTxForDb = {
+        id: purchaseTx.id,
+        company_id: companyId,
+        type: 'purchase',
+        createdAt: new Date().toISOString(),
+        date: summary?.purchaseDate || new Date().toISOString(),
+        products: Array.isArray(summary?.products) ? summary.products : [],
+        totalAmount: Number(summary?.totalAmount || 0),
+        amountPaid: Number(summary?.amountPaid || 0),
+        dueAmount: Number((Number(summary?.totalAmount || 0) - Number(summary?.amountPaid || 0)).toFixed(2)),
+        dueDate: summary?.dueDate || null,
+        paymentDate: Number(summary?.amountPaid || 0) >= Number(summary?.totalAmount || 0) ? (summary?.purchaseDate || new Date().toISOString()) : null,
+        totalOutstandingDue: Number((newCompanyState.dueAmount + Math.max(0, Number(summary?.totalAmount || 0) - Number(summary?.amountPaid || 0))).toFixed(2))
       };
-    }));
+      await insertCompanyTransaction(purchaseTxForDb);
+    } catch (error) {
+      console.error('Failed to add company purchase in Supabase:', error);
+      notify(error?.message || 'Failed to add company purchase. Please try again.', 'error');
+    }
   };
 
-  const handleRecordCompanyPayment = (companyId, amount, paymentDate) => {
-    setCompanies(prev => prev.map(company => {
-      if (company.id !== companyId) return company;
+  const handleRecordCompanyPayment = async (companyId, amount, paymentDate) => {
+    try {
+      const updatedCompany = companies.find(c => c.id === companyId);
+      if (!updatedCompany) {
+        notify('Company not found.', 'error');
+        return;
+      }
 
-      const normalizedCompany = normalizeCompany(company);
+      const normalizedCompany = normalizeCompany(updatedCompany);
       const paymentAmount = Number(amount || 0);
       const paymentDateValue = paymentDate || new Date().toISOString();
       const previousDue = Number(normalizedCompany.dueAmount || 0);
@@ -864,10 +1062,16 @@ function App() {
       };
 
       const rebuilt = summarizeCompanyBalances([...(normalizedCompany.transactionHistory || []), paymentTx]);
+      const newCompanyState = {
+        ...normalizedCompany,
+        amountPaid: rebuilt.amountPaid,
+        dueAmount: rebuilt.dueAmount,
+        transactionHistory: rebuilt.transactionHistory
+      };
 
       const role = currentRoleRef.current || 'Staff';
       addCompanyHistoryRecord({
-        companyName: company.name,
+        companyName: updatedCompany.name,
         medicineNames: '-',
         quantity: 0,
         totalAmount: 0,
@@ -877,20 +1081,36 @@ function App() {
         addedBy: role,
       }, role);
 
-      return {
-        ...normalizedCompany,
-        amountPaid: rebuilt.amountPaid,
-        dueAmount: rebuilt.dueAmount,
-        transactionHistory: rebuilt.transactionHistory
+      await upsertCompanies([newCompanyState]);
+      setCompanies(prev => prev.map(c => c.id === companyId ? newCompanyState : c));
+
+      const paymentTxForDb = {
+        id: paymentTx.id,
+        company_id: companyId,
+        type: 'payment',
+        createdAt: new Date().toISOString(),
+        date: paymentDate || new Date().toISOString(),
+        amount: paymentAmount,
+        previousDue: Number(updatedCompany.dueAmount || 0),
+        remainingDue: nextDue,
+        totalOutstandingDue: nextDue
       };
-    }));
+      await insertCompanyTransaction(paymentTxForDb);
+    } catch (error) {
+      console.error('Failed to record company payment in Supabase:', error);
+      notify(error?.message || 'Failed to record company payment. Please try again.', 'error');
+    }
   };
 
-  const handleEditCompanyTransaction = (companyId, txId, updated) => {
-    setCompanies(prev => prev.map(company => {
-      if (company.id !== companyId) return company;
+  const handleEditCompanyTransaction = async (companyId, txId, updated) => {
+    try {
+      const updatedCompany = companies.find(c => c.id === companyId);
+      if (!updatedCompany) {
+        notify('Company not found.', 'error');
+        return;
+      }
 
-      const normalizedCompany = normalizeCompany(company);
+      const normalizedCompany = normalizeCompany(updatedCompany);
       const nextHistory = (normalizedCompany.transactionHistory || []).map(tx => {
         if (tx.id !== txId || tx.type !== 'purchase') return tx;
 
@@ -922,7 +1142,7 @@ function App() {
       const amountPaid = Number(updated?.amountPaid || 0);
 
       addCompanyHistoryRecord({
-        companyName: company.name,
+        companyName: updatedCompany.name,
         medicineNames,
         quantity,
         totalAmount,
@@ -932,14 +1152,20 @@ function App() {
         addedBy: role,
       }, role);
 
-      return {
+      const newCompanyState = {
         ...normalizedCompany,
         totalPurchaseAmount: rebuilt.totalPurchaseAmount,
         amountPaid: rebuilt.amountPaid,
         dueAmount: rebuilt.dueAmount,
         transactionHistory: rebuilt.transactionHistory
       };
-    }));
+
+      await upsertCompanies([newCompanyState]);
+      setCompanies(prev => prev.map(c => c.id === companyId ? newCompanyState : c));
+    } catch (error) {
+      console.error('Failed to edit company transaction in Supabase:', error);
+      notify(error?.message || 'Failed to edit company transaction. Please try again.', 'error');
+    }
   };
 
   // Router switcher view helper
@@ -994,6 +1220,7 @@ function App() {
             medicines={medicines}
             customers={customers}
             companies={companies}
+            returns={returns}
             currentRole={currentRole}
             language={language}
             t={t}
@@ -1089,6 +1316,7 @@ function App() {
           t={t}
         />
         {renderActiveView()}
+        <Toast toast={toast} onClose={hideToast} />
       </div>
     </div>
   );

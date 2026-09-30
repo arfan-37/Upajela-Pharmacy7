@@ -1,30 +1,9 @@
-const STORAGE_KEY = 'shabab_financial_reports';
+import { upsertFinancialReport, getFinancialReportByDate } from '../lib/repositories/financialReportsRepo.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const nowTimestamp = () => new Date().toISOString();
 const startOfDay = (dateStr) => `${dateStr}T00:00:00.000Z`;
 const endOfDay = (dateStr) => `${dateStr}T23:59:59.999Z`;
-
-const loadReports = (seedReports = []) => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-    if (seedReports.length > 0) {
-      saveReports(seedReports);
-      return seedReports;
-    }
-    return [];
-  } catch {
-    return seedReports.length > 0 ? seedReports : [];
-  }
-};
-
-const saveReports = (reports) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
-};
 
 const findReport = (reports, dateStr) => reports.find(r => r.reportDate === dateStr);
 
@@ -47,6 +26,9 @@ const ensureDayReport = (reports, dateStr) => {
     totalAmountPaidToCompanies: 0,
     totalCompanyPayable: 0,
     totalTransactions: 0,
+    totalReturnRefunds: 0,
+    totalDueAdjusted: 0,
+    returnTransactions: [],
     salesTransactions: [],
     companyPurchases: [],
     customerPayments: [],
@@ -57,24 +39,7 @@ const ensureDayReport = (reports, dateStr) => {
   return [newReport, ...reports];
 };
 
-const getTodayReport = (reports, seedReports = []) => {
-  const today = todayStr();
-  let current = reports && reports.length > 0 ? reports : loadReports(seedReports);
-  current = ensureDayReport(current, today);
-  saveReports(current);
-  return findReport(current, today) || current[0];
-};
-
-const getReportByDate = (reports, dateStr) => {
-  let current = reports;
-  if (!findReport(current, dateStr)) {
-    current = ensureDayReport(current, dateStr);
-    saveReports(current);
-  }
-  return findReport(current, dateStr);
-};
-
-const buildReportFromTransactions = (report, transactions, medicines, customers, companies) => {
+const buildReportFromTransactions = (report, transactions, medicines, customers, companies, returns = []) => {
   const reportDate = report.reportDate;
   const dayStart = new Date(startOfDay(reportDate));
   const dayEnd = new Date(endOfDay(reportDate));
@@ -96,7 +61,6 @@ const buildReportFromTransactions = (report, transactions, medicines, customers,
     const subtotal = Number(tx.subtotal || 0);
     const cashReceived = Number(tx.cashReceived || 0);
     const discount = Number(tx.discount || 0);
-    const tax = Number(tx.tax || 0);
     const total = Number(tx.total || 0);
 
     totalSalesAmount += total;
@@ -117,10 +81,38 @@ const buildReportFromTransactions = (report, transactions, medicines, customers,
       items: tx.items,
       subtotal,
       discount,
-      tax,
       total,
       cashReceived,
       changeGiven: tx.changeGiven || 0
+    });
+  });
+
+  const returnsInDay = (returns || []).filter(r => {
+    const rDate = new Date(r.returnDate);
+    return rDate >= dayStart && rDate <= dayEnd;
+  });
+
+  let totalReturnRefunds = 0;
+  let totalDueAdjusted = 0;
+  const returnTransactions = [];
+
+  returnsInDay.forEach(r => {
+    const cashRefund = Number(r.cashRefund || 0);
+    const dueAdjustment = Number(r.dueAdjustment || 0);
+    totalReturnRefunds = Number((totalReturnRefunds + cashRefund).toFixed(2));
+    totalDueAdjusted = Number((totalDueAdjusted + dueAdjustment).toFixed(2));
+    returnTransactions.push({
+      id: r.id,
+      returnDate: r.returnDate,
+      originalInvoiceId: r.originalInvoiceId,
+      customerName: r.customerName,
+      medicineName: r.medicineName,
+      returnQuantity: r.returnQuantity,
+      refundAmount: Number(r.refundAmount || 0),
+      dueAdjustment,
+      cashRefund,
+      processedBy: r.processedBy,
+      reason: r.reason
     });
   });
 
@@ -140,6 +132,9 @@ const buildReportFromTransactions = (report, transactions, medicines, customers,
     totalAmountPaidToCompanies: report.totalAmountPaidToCompanies || 0,
     totalCompanyPayable: report.totalCompanyPayable || 0,
     totalTransactions,
+    totalReturnRefunds,
+    totalDueAdjusted,
+    returnTransactions,
     salesTransactions,
     companyPurchases: report.companyPurchases || [],
     customerPayments: report.customerPayments || [],
@@ -245,42 +240,91 @@ const updateCustomerMetrics = (report, customers) => {
   };
 };
 
-const generateDailyReport = (dateStr, transactions, medicines, customers, companies, seedReports = []) => {
-  const reports = loadReports(seedReports);
-  let report = getReportByDate(reports, dateStr);
-
-  report = buildReportFromTransactions(report, transactions, medicines, customers, companies);
-  report = updateCompanyMetrics(report, companies);
-  report = updateCustomerMetrics(report, customers);
-
-  const updated = reports.map(r => r.reportDate === dateStr ? report : r);
-  if (!findReport(updated, dateStr)) {
-    updated.push(report);
+export async function generateDailyReport(dateStr, transactions, medicines, customers, companies, returns = []) {
+  let report = await getFinancialReportByDate(dateStr);
+  if (!report) {
+    report = {
+      id: `RPT-${dateStr}-${Date.now()}`,
+      reportDate: dateStr,
+      createdAt: nowTimestamp(),
+      lastUpdatedAt: nowTimestamp(),
+      totalSalesAmount: 0,
+      totalPurchaseCost: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      totalCashReceived: 0,
+      totalDueCollected: 0,
+      totalCustomerDueCreated: 0,
+      totalAmountPaidToCompanies: 0,
+      totalCompanyPayable: 0,
+      totalTransactions: 0,
+      totalReturnRefunds: 0,
+      totalDueAdjusted: 0,
+      returnTransactions: [],
+      salesTransactions: [],
+      companyPurchases: [],
+      customerPayments: [],
+      companyPayments: [],
+      isClosed: false
+    };
   }
-  saveReports(updated);
+
+  report = buildReportFromTransactions(report, transactions, medicines, customers, companies, returns);
+  report = updateCompanyMetrics(report, companies);
+  report = updateCustomerMetrics(report, companies);
+
+  await upsertFinancialReport(report);
   return report;
-};
+}
 
-const ensureTodayReportExists = (transactions, medicines, customers, companies, seedReports = []) => {
-  const reports = loadReports(seedReports);
+export async function ensureTodayReportExists(transactions, medicines, customers, companies, returns = []) {
   const today = todayStr();
-  let current = ensureDayReport(reports, today);
+  let report = await getFinancialReportByDate(today);
 
-  const report = findReport(current, today);
-  const updated = buildReportFromTransactions(report, transactions, medicines, customers, companies);
-  updated.companyPayments = report.companyPayments || [];
-  updated.companyPurchases = report.companyPurchases || [];
-  updated.customerPayments = report.customerPayments || [];
-  const final = updateCompanyMetrics(updated, companies);
+  if (!report) {
+    report = {
+      id: `RPT-${today}-${Date.now()}`,
+      reportDate: today,
+      createdAt: nowTimestamp(),
+      lastUpdatedAt: nowTimestamp(),
+      totalSalesAmount: 0,
+      totalPurchaseCost: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      totalCashReceived: 0,
+      totalDueCollected: 0,
+      totalCustomerDueCreated: 0,
+      totalAmountPaidToCompanies: 0,
+      totalCompanyPayable: 0,
+      totalTransactions: 0,
+      totalReturnRefunds: 0,
+      totalDueAdjusted: 0,
+      returnTransactions: [],
+      salesTransactions: [],
+      companyPurchases: [],
+      customerPayments: [],
+      companyPayments: [],
+      isClosed: false
+    };
+  }
+
+  report = buildReportFromTransactions(report, transactions, medicines, customers, companies, returns);
+  report.companyPayments = report.companyPayments || [];
+  report.companyPurchases = report.companyPurchases || [];
+  report.customerPayments = report.customerPayments || [];
+  const final = updateCompanyMetrics(report, companies);
   const final2 = updateCustomerMetrics(final, customers);
 
-  const merged = current.map(r => r.reportDate === today ? final2 : r);
-  if (!findReport(merged, today)) merged.push(final2);
-  saveReports(merged);
+  await upsertFinancialReport(final2);
   return final2;
-};
+}
 
-const filterReports = (reports, filterType, customFrom, customTo) => {
+export async function loadReports() {
+  const allReports = await import('../lib/repositories/financialReportsRepo.js').then(m => m.getAllFinancialReports());
+  return allReports || [];
+}
+
+export function filterReports(reports, filterType, customFrom, customTo) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -310,7 +354,7 @@ const filterReports = (reports, filterType, customFrom, customTo) => {
       break;
     case 'lastMonth':
       fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      toDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
       break;
     case 'thisYear':
       fromDate = new Date(today.getFullYear(), 0, 1);
@@ -335,9 +379,9 @@ const filterReports = (reports, filterType, customFrom, customTo) => {
   if (!fromStr || !toStr) return reports;
 
   return reports.filter(r => r.reportDate >= fromStr && r.reportDate <= toStr);
-};
+}
 
-const getAggregatedMetrics = (filteredReports) => {
+export const getAggregatedMetrics = (filteredReports) => {
   return filteredReports.reduce(
     (acc, r) => {
       acc.totalSalesAmount += Number(r.totalSalesAmount || 0);
@@ -350,6 +394,8 @@ const getAggregatedMetrics = (filteredReports) => {
       acc.totalAmountPaidToCompanies += Number(r.totalAmountPaidToCompanies || 0);
       acc.totalCompanyPayable += Number(r.totalCompanyPayable || 0);
       acc.totalTransactions += Number(r.totalTransactions || 0);
+      acc.totalReturnRefunds += Number(r.totalReturnRefunds || 0);
+      acc.totalDueAdjusted += Number(r.totalDueAdjusted || 0);
       return acc;
     },
     {
@@ -362,21 +408,14 @@ const getAggregatedMetrics = (filteredReports) => {
       totalCustomerDueCreated: 0,
       totalAmountPaidToCompanies: 0,
       totalCompanyPayable: 0,
-      totalTransactions: 0
+      totalTransactions: 0,
+      totalReturnRefunds: 0,
+      totalDueAdjusted: 0
     }
   );
 };
 
 export {
-  loadReports,
-  saveReports,
-  getTodayReport,
-  getReportByDate,
-  generateDailyReport,
-  ensureTodayReportExists,
-  filterReports,
-  getAggregatedMetrics,
   todayStr,
-  nowTimestamp,
-  STORAGE_KEY
+  nowTimestamp
 };

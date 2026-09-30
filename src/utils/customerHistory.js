@@ -11,6 +11,16 @@ export const getOldestOutstandingDueDate = (history = []) => {
   for (const entry of timeline) {
     if (entry.type === 'sale' && entry.dueCreated > 0) {
       pendingDues.push({ date: entry.purchaseDate || entry.createdAt, amount: entry.dueCreated });
+    } else if (entry.type === 'return') {
+      const returnAmount = toAmount(entry.totalPurchaseAmount ?? entry.refundAmount ?? 0);
+      let remaining = returnAmount;
+      while (remaining > 0 && pendingDues.length > 0 && pendingDues[0].amount <= remaining) {
+        remaining = Number((remaining - pendingDues[0].amount).toFixed(2));
+        pendingDues.shift();
+      }
+      if (remaining > 0 && pendingDues.length > 0) {
+        pendingDues[0].amount = Number((pendingDues[0].amount - remaining).toFixed(2));
+      }
     } else if (entry.type === 'payment') {
       let remaining = entry.paymentAmount;
       while (remaining > 0 && pendingDues.length > 0 && pendingDues[0].amount <= remaining) {
@@ -36,6 +46,11 @@ export const summarizeCustomerBalances = (history = []) => {
   for (const entry of orderedHistory) {
     if (entry.type === 'sale') {
       totalPurchaseAmount = Number((totalPurchaseAmount + toAmount(entry.totalPurchaseAmount)).toFixed(2));
+      cashPaid = Number((cashPaid + toAmount(entry.cashPaid)).toFixed(2));
+      dueAmount = Number(entry.totalOutstandingDue ?? dueAmount);
+    } else if (entry.type === 'return') {
+      const returnAmount = toAmount(entry.totalPurchaseAmount ?? entry.refundAmount ?? 0);
+      totalPurchaseAmount = Number((totalPurchaseAmount - returnAmount).toFixed(2));
       cashPaid = Number((cashPaid + toAmount(entry.cashPaid)).toFixed(2));
       dueAmount = Number(entry.totalOutstandingDue ?? dueAmount);
     } else if (entry.type === 'payment') {
@@ -81,6 +96,24 @@ export const rebuildCustomerHistoryTimeline = (history = []) => {
         totalPurchaseAmount,
         cashPaid,
         dueCreated,
+        totalOutstandingDue: runningDue,
+        remainingDue: runningDue
+      };
+    }
+
+    if (entry.type === 'return') {
+      const returnAmount = toAmount(entry.totalPurchaseAmount ?? entry.refundAmount ?? 0);
+      const cashRefund = toAmount(entry.cashPaid ?? 0);
+      runningDue = Number(Math.max(0, runningDue - returnAmount).toFixed(2));
+
+      return {
+        ...entry,
+        type: 'return',
+        createdAt: timestamp,
+        purchaseDate: entry.purchaseDate || timestamp,
+        totalPurchaseAmount: returnAmount,
+        cashPaid: cashRefund,
+        dueCreated: 0,
         totalOutstandingDue: runningDue,
         remainingDue: runningDue
       };

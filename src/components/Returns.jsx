@@ -146,7 +146,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
     setReturnItems(prev => ({ ...prev, [itemId]: num }));
   };
 
-  const processReturn = () => {
+  const processReturn = async () => {
     setError('');
     setSuccess('');
     if (!selectedTransaction) return;
@@ -156,6 +156,12 @@ export default function Returns({ transactions, medicines, customers, returns, o
       setError(t.returns?.selectItem || 'Please select at least one item to return.');
       return;
     }
+
+    const returnAmount = getTotalRefund();
+    const isDueSale = selectedTransaction.paymentType === 'due' || selectedTransaction.paymentType === 'partial';
+    const previousDue = isDueSale && selectedCustomer ? Number(selectedCustomer.dueAmount || 0) : 0;
+    const totalDueAdjustment = Math.min(previousDue, returnAmount);
+    const totalCashRefund = Number((returnAmount - totalDueAdjustment).toFixed(2));
 
     const returnRecords = [];
     for (const item of selectedTransaction.items) {
@@ -171,6 +177,9 @@ export default function Returns({ transactions, medicines, customers, returns, o
       if (!medicine) continue;
 
       const refundAmount = Number((returnQty * item.price).toFixed(2));
+      const itemRefundRatio = returnAmount > 0 ? refundAmount / returnAmount : 0;
+      const itemDueAdjustment = Number((totalDueAdjustment * itemRefundRatio).toFixed(2));
+      const itemCashRefund = Number((totalCashRefund * itemRefundRatio).toFixed(2));
 
       returnRecords.push({
         id: `RET-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -185,6 +194,8 @@ export default function Returns({ transactions, medicines, customers, returns, o
         returnQuantity: returnQty,
         reason: returnReason.trim() || '-',
         refundAmount,
+        dueAdjustment: itemDueAdjustment,
+        cashRefund: itemCashRefund,
         refundType: selectedTransaction.paymentType === 'due' ? 'adjust_due' : selectedTransaction.paymentType === 'partial' ? 'partial' : 'cash',
         processedBy: currentRole,
         status: 'completed'
@@ -193,7 +204,7 @@ export default function Returns({ transactions, medicines, customers, returns, o
 
     if (returnRecords.length === 0) return;
 
-    onProcessReturn({
+    await onProcessReturn({
       returns: returnRecords,
       originalTransaction: selectedTransaction,
       returnItems: returnRecords.map(r => ({
@@ -204,13 +215,14 @@ export default function Returns({ transactions, medicines, customers, returns, o
     });
 
     const totalRefund = returnRecords.reduce((sum, r) => sum + r.refundAmount, 0);
-    setSuccess(t.returns?.processSuccess || `Return processed successfully. Total refund: ৳${totalRefund.toFixed(2)}`);
+    const totalDueAdj = returnRecords.reduce((sum, r) => sum + (r.dueAdjustment || 0), 0);
+    const totalCashRef = returnRecords.reduce((sum, r) => sum + (r.cashRefund || 0), 0);
+    setSuccess(t.returns?.processSuccess || `Return processed successfully. Total refund: ৳${totalRefund.toFixed(2)} (Due: ৳${totalDueAdj.toFixed(2)}, Cash: ৳${totalCashRef.toFixed(2)})`);
     setSelectedTransaction(null);
     setReturnItems({});
     setReturnReason('');
     setSelectedCustomer(null);
   };
-
   const getCustomerInvoices = () => {
     if (!selectedCustomer) return [];
     const customerId = selectedCustomer.id;
@@ -410,6 +422,12 @@ export default function Returns({ transactions, medicines, customers, returns, o
                 <strong>{t.returns?.date || 'Date'}:</strong> {new Date(selectedTransaction.timestamp).toLocaleString()}
                 <br />
                 <strong>{t.returns?.customer || 'Customer'}:</strong> {selectedTransaction.customer?.name || 'Walk-in Customer'}
+                {selectedTransaction.customer?.phone ? (
+                  <>
+                    <br />
+                    <strong>{t.returns?.phone || 'Mobile'}:</strong> {selectedTransaction.customer.phone}
+                  </>
+                ) : null}
               </div>
               <div style={{ textAlign: 'right' }}>
                 <strong>{t.returns?.total || 'Total'}:</strong> ৳{Number(selectedTransaction.total || 0).toFixed(2)}
@@ -556,6 +574,9 @@ export default function Returns({ transactions, medicines, customers, returns, o
                     <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.medicine || 'Medicine'}</th>
                     <th style={{ textAlign: 'center', padding: '8px' }}>{t.returns?.returnQty || 'Qty'}</th>
                     <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.refund || 'Refund'}</th>
+                    <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.dueAdjustment || 'Due Adjustment'}</th>
+                    <th style={{ textAlign: 'right', padding: '8px' }}>{t.returns?.cashRefund || 'Cash Refund'}</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.processedBy || 'Processed By'}</th>
                     <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.reason || 'Reason'}</th>
                     <th style={{ textAlign: 'left', padding: '8px' }}>{t.returns?.date || 'Date'}</th>
                   </tr>
@@ -568,6 +589,9 @@ export default function Returns({ transactions, medicines, customers, returns, o
                       <td style={{ padding: '8px' }}>{record.medicineName}</td>
                       <td style={{ textAlign: 'center', padding: '8px' }}>{record.returnQuantity}</td>
                       <td style={{ textAlign: 'right', padding: '8px' }}>৳{Number(record.refundAmount || 0).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', padding: '8px' }}>৳{Number(record.dueAdjustment || 0).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', padding: '8px' }}>৳{Number(record.cashRefund || 0).toFixed(2)}</td>
+                      <td style={{ padding: '8px' }}>{record.processedBy || '-'}</td>
                       <td style={{ padding: '8px', textTransform: 'capitalize' }}>{record.reason}</td>
                       <td style={{ padding: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
                         {new Date(record.returnDate).toLocaleDateString()}

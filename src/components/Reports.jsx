@@ -9,15 +9,15 @@ import {
   getAggregatedMetrics,
   todayStr
 } from '../utils/financialReports';
-import { initialFinancialReports } from '../utils/mockData';
 
-export default function Reports({ transactions, medicines, customers, companies, currentRole, t, onNavigateAway }) {
-  const [reports, setReports] = useState(() => loadReports(initialFinancialReports));
+export default function Reports({ transactions, medicines, customers, companies, returns, currentRole, t, onNavigateAway }) {
+  const [reports, setReports] = useState([]);
   const [filterType, setFilterType] = useState('last7');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
   const [isFinanceUnlocked, setIsFinanceUnlocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const lockFinance = useCallback(() => {
     setIsFinanceUnlocked(false);
@@ -27,14 +27,12 @@ export default function Reports({ transactions, medicines, customers, companies,
     setIsFinanceUnlocked(true);
   }, []);
 
-  // Register lock function with parent so navigation can trigger it
   React.useEffect(() => {
     if (onNavigateAway) {
       onNavigateAway(lockFinance);
     }
   }, [onNavigateAway, lockFinance]);
 
-  // Lock on refresh/close, tab switch, back/forward
   React.useEffect(() => {
     if (!isFinanceUnlocked) return;
 
@@ -58,22 +56,68 @@ export default function Reports({ transactions, medicines, customers, companies,
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [isFinanceUnlocked, lockFinance]);
 
   useEffect(() => {
-    if (!isFinanceUnlocked) return;
-    ensureTodayReportExists(transactions, medicines, customers, companies, initialFinancialReports);
-    setReports(loadReports(initialFinancialReports));
-  }, [isFinanceUnlocked, transactions, medicines, customers, companies]);
+    let cancelled = false;
+    setIsLoading(true);
+
+    const load = async () => {
+      try {
+        const allReports = await loadReports();
+        if (!cancelled) {
+          setReports(allReports);
+        }
+      } catch (error) {
+        console.error('Failed to load reports from database', error);
+        if (!cancelled) {
+          setReports([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isFinanceUnlocked]);
 
   useEffect(() => {
     if (!isFinanceUnlocked) return;
-    const interval = setInterval(() => {
-    setReports(loadReports(initialFinancialReports));
+
+    const refresh = async () => {
+      try {
+        await ensureTodayReportExists(transactions, medicines, customers, companies, returns);
+        const allReports = await loadReports();
+        setReports(allReports);
+      } catch (error) {
+        console.error('Failed to refresh reports', error);
+      }
+    };
+
+    refresh();
+  }, [isFinanceUnlocked, transactions, medicines, customers, companies, returns]);
+
+  useEffect(() => {
+    if (!isFinanceUnlocked) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const allReports = await loadReports();
+        setReports(allReports);
+      } catch (error) {
+        console.error('Failed to refresh reports', error);
+      }
     }, 60000);
+
     return () => clearInterval(interval);
   }, [isFinanceUnlocked]);
 
@@ -93,10 +137,15 @@ export default function Reports({ transactions, medicines, customers, companies,
     );
   }
 
-  const handleGenerateToday = () => {
-    const report = generateDailyReport(todayStr(), transactions, medicines, customers, companies);
-    setReports(loadReports(initialFinancialReports));
-    setSelectedReport(report);
+  const handleGenerateToday = async () => {
+    try {
+      const report = await generateDailyReport(todayStr(), transactions, medicines, customers, companies, returns);
+      const allReports = await loadReports();
+      setReports(allReports);
+      setSelectedReport(report);
+    } catch (error) {
+      console.error('Failed to generate today report', error);
+    }
   };
 
   const handleExportCSV = (report) => {
@@ -113,9 +162,20 @@ export default function Reports({ transactions, medicines, customers, companies,
       ['Total Paid to Companies', report.totalAmountPaidToCompanies],
       ['Total Company Payable', report.totalCompanyPayable],
       ['Total Transactions', report.totalTransactions],
+      ['Total Return Refunds', report.totalReturnRefunds],
+      ['Total Due Adjusted', report.totalDueAdjusted],
       ['Created At', report.createdAt],
       ['Last Updated', report.lastUpdatedAt]
     ];
+
+    if (report.returnTransactions && report.returnTransactions.length > 0) {
+      rows.push([]);
+      rows.push(['Return Transactions']);
+      rows.push(['Return ID', 'Invoice', 'Customer', 'Medicine', 'Qty', 'Refund', 'Due Adjustment', 'Cash Refund', 'Processed By', 'Reason', 'Date']);
+      report.returnTransactions.forEach(r => {
+        rows.push([r.id, r.originalInvoiceId, r.customerName, r.medicineName, r.returnQuantity, r.refundAmount, r.dueAdjustment, r.cashRefund, r.processedBy, r.reason, r.returnDate]);
+      });
+    }
 
     const csv = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -166,6 +226,8 @@ export default function Reports({ transactions, medicines, customers, companies,
           <tr><td>Total Paid to Companies</td><td class="amount">${report.totalAmountPaidToCompanies.toFixed(2)}</td></tr>
           <tr><td>Total Company Payable</td><td class="amount">${report.totalCompanyPayable.toFixed(2)}</td></tr>
           <tr><td>Total Transactions</td><td class="amount">${report.totalTransactions}</td></tr>
+          <tr><td>Total Return Refunds</td><td class="amount">৳${(report.totalReturnRefunds || 0).toFixed(2)}</td></tr>
+          <tr><td>Total Due Adjusted</td><td class="amount">৳${(report.totalDueAdjusted || 0).toFixed(2)}</td></tr>
         </table>
 
         ${report.salesTransactions && report.salesTransactions.length > 0 ? `
@@ -184,9 +246,30 @@ export default function Reports({ transactions, medicines, customers, companies,
         </table>
         ` : ''}
 
+        ${report.returnTransactions && report.returnTransactions.length > 0 ? `
+        <div class="section-title">Return Transactions</div>
+        <table>
+          <tr><th>Return ID</th><th>Invoice</th><th>Customer</th><th>Medicine</th><th>Qty</th><th>Refund</th><th>Due Adj</th><th>Cash Refund</th><th>Processed By</th><th>Reason</th><th>Date</th></tr>
+          ${report.returnTransactions.map(r => `
+            <tr>
+              <td>${r.id}</td>
+              <td>${r.originalInvoiceId}</td>
+              <td>${r.customerName}</td>
+              <td>${r.medicineName}</td>
+              <td>${r.returnQuantity}</td>
+              <td class="amount">৳${r.refundAmount.toFixed(2)}</td>
+              <td class="amount">৳${r.dueAdjustment.toFixed(2)}</td>
+              <td class="amount">৳${r.cashRefund.toFixed(2)}</td>
+              <td>${r.processedBy || '-'}</td>
+              <td>${r.reason}</td>
+              <td>${new Date(r.returnDate).toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </table>
+        ` : ''}
+
         <script>window.onload = function() { window.print(); }</script>
       </body>
-      </html>
     `);
     printWindow.document.close();
   };
@@ -318,13 +401,22 @@ export default function Reports({ transactions, medicines, customers, companies,
                 <th>{t.financialReports.companyPaid}</th>
                 <th>{t.financialReports.companyPayable}</th>
                 <th>{t.financialReports.transactions}</th>
+                <th>Return Refunds</th>
+                <th>Due Adjusted</th>
                 <th>{t.financialReports.actions}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredReports.length === 0 && (
+              {isLoading && (
                 <tr>
-                  <td colSpan="13" className="empty-table-cell">
+                  <td colSpan="15" className="empty-table-cell">
+                    Loading reports...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && filteredReports.length === 0 && (
+                <tr>
+                  <td colSpan="15" className="empty-table-cell">
                     {t.financialReports.noReports}
                   </td>
                 </tr>
@@ -343,6 +435,8 @@ export default function Reports({ transactions, medicines, customers, companies,
                   <td>৳ {Number(r.totalAmountPaidToCompanies || 0).toFixed(2)}</td>
                   <td>৳ {Number(r.totalCompanyPayable || 0).toFixed(2)}</td>
                   <td>{r.totalTransactions || 0}</td>
+                  <td>৳ {Number(r.totalReturnRefunds || 0).toFixed(2)}</td>
+                  <td>৳ {Number(r.totalDueAdjusted || 0).toFixed(2)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       <button className="btn btn-secondary btn-sm" onClick={() => setSelectedReport(r)} title="View">
@@ -393,6 +487,16 @@ export default function Reports({ transactions, medicines, customers, companies,
                   <div className="report-detail-row"><span>{t.financialReports.totalCompanyPayable}:</span><strong>৳ {selectedReport.totalCompanyPayable.toFixed(2)}</strong></div>
                 </div>
               </div>
+
+              {(selectedReport.totalReturnRefunds > 0 || selectedReport.totalDueAdjusted > 0) && (
+                <div className="glass-card">
+                  <h4>Returns / Refunds</h4>
+                  <div className="report-detail-rows">
+                    <div className="report-detail-row"><span>Total Return Refunds (Cash):</span><strong style={{ color: 'var(--danger)' }}>৳ {selectedReport.totalReturnRefunds.toFixed(2)}</strong></div>
+                    <div className="report-detail-row"><span>Total Due Adjusted:</span><strong style={{ color: 'var(--success)' }}>৳ {selectedReport.totalDueAdjusted.toFixed(2)}</strong></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">

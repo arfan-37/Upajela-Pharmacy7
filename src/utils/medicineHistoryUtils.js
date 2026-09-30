@@ -1,39 +1,22 @@
-const MEDICINE_HISTORY_KEY = 'shabab_medicine_history';
+import { insertMedicineHistory } from '../lib/repositories/medicineHistoryRepo.js';
 
 const now = () => new Date().toISOString();
 
-const load = () => {
-  try {
-    const raw = localStorage.getItem(MEDICINE_HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const save = (records) => {
-  localStorage.setItem(MEDICINE_HISTORY_KEY, JSON.stringify(records));
-};
-
 const uid = () => `med-hist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
-export const loadMedicineHistory = () => load();
+export const loadMedicineHistory = () => [];
 
 export const addMedicineHistoryRecord = (record, currentUserRole) => {
-  const records = load();
   const entry = {
-    id: uid(),
     createdAt: now(),
     updatedBy: currentUserRole || 'Staff',
     ...record,
   };
-  records.unshift(entry);
-  save(records);
+  insertMedicineHistory(entry).catch(console.error);
   return entry;
 };
 
-export const getMedicineHistory = (medicineId) => {
-  return load().filter(r => r.medicineId === medicineId);
+export const getMedicineHistory = async (medicineId) => {
+  const { getMedicineHistory } = await import('../lib/repositories/medicineHistoryRepo.js');
+  return getMedicineHistory(medicineId);
 };

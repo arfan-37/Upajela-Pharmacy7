@@ -19,23 +19,27 @@ export default function Dashboard({ medicines, transactions, currentRole, setAct
     return getMedicineExpirySummary(med, TODAY, EXPIRY_WARNING_DAYS).hasExpiringBatches;
   };
 
-  const expiredMedicines = medicines.filter(m => isMedicineHasExpiredBatch(m));
-  const expiringSoonMedicines = medicines.filter(m => {
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeMedicines = Array.isArray(medicines) ? medicines : [];
+
+  const expiredMedicines = safeMedicines.filter(m => isMedicineHasExpiredBatch(m));
+  const expiringSoonMedicines = safeMedicines.filter(m => {
     if (!isMedicineExpiringSoon(m)) return false;
     return !isMedicineHasExpiredBatch(m);
   });
   const totalUrgentCount = expiredMedicines.length + expiringSoonMedicines.length;
 
-  const totalItems = medicines.length;
+  const totalItems = safeMedicines.length;
 
-  const lowStockMedicines = medicines.filter(m => getMedicineTotalStock(m) < 15);
+  const lowStockMedicines = safeMedicines.filter(m => getMedicineTotalStock(m) < 15);
   const lowStockCount = lowStockMedicines.length;
 
   // Sales by Category (general inventory statistics - safe for all roles)
   const categorySales = {};
-  transactions.forEach(tx => {
-    tx.items.forEach(item => {
-      const med = medicines.find(m => m.id === item.id);
+  safeTransactions.forEach(tx => {
+    const items = Array.isArray(tx.items) ? tx.items : [];
+    items.forEach(item => {
+      const med = safeMedicines.find(m => m.id === item.id);
       const cat = med ? med.category : 'Other';
       categorySales[cat] = (categorySales[cat] || 0) + (item.price * item.quantity);
     });

@@ -17,7 +17,6 @@ export default function ReceiptModal({ transaction, onClose, t }) {
     total: 'Total',
     subtotal: 'Subtotal:',
     discount: 'Discount:',
-    tax: 'VAT / Tax (5%):',
     grandTotal: 'GRAND TOTAL:',
     cashReceived: 'Cash Received:',
     changeGiven: 'Change Given:',
@@ -115,10 +114,6 @@ export default function ReceiptModal({ transaction, onClose, t }) {
                 <span>-৳{safeNumber(transaction.discount, 0).toFixed(2)}</span>
               </div>
             )}
-            <div className="totals-row">
-              <span>{text.tax}</span>
-              <span>৳{safeNumber(transaction.tax, 0).toFixed(2)}</span>
-            </div>
             <div className="receipt-divider dashed" />
             <div className="totals-row grand-total">
               <span>{text.grandTotal}</span>

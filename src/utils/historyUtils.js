@@ -1,22 +1,7 @@
-const INVENTORY_HISTORY_KEY = 'shabab_inventory_history';
-const COMPANY_HISTORY_KEY = 'shabab_company_history';
+import { insertInventoryHistory } from '../lib/repositories/inventoryHistoryRepo.js';
+import { insertCompanyHistory } from '../lib/repositories/companyHistoryRepo.js';
 
 const now = () => new Date().toISOString();
-
-const load = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const save = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
-};
 
 const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
@@ -25,35 +10,23 @@ const formatBatchLabel = (batchNumber) => {
   return Number.isFinite(numeric) && numeric > 0 ? `Batch ${Math.floor(numeric)}` : '-';
 };
 
-export const loadInventoryHistory = () => load(INVENTORY_HISTORY_KEY);
-export const saveInventoryHistory = (records) => save(INVENTORY_HISTORY_KEY, records);
-
-export const loadCompanyHistory = () => load(COMPANY_HISTORY_KEY);
-export const saveCompanyHistory = (records) => save(COMPANY_HISTORY_KEY, records);
-
 export const addInventoryHistoryRecord = (record, currentUserRole) => {
-  const records = loadInventoryHistory();
   const entry = {
-    id: uid('inv-hist'),
     createdAt: now(),
     addedBy: currentUserRole || 'Staff',
     ...record,
   };
-  records.unshift(entry);
-  saveInventoryHistory(records);
+  insertInventoryHistory(entry).catch(console.error);
   return entry;
 };
 
 export const addCompanyHistoryRecord = (record, currentUserRole) => {
-  const records = loadCompanyHistory();
   const entry = {
-    id: uid('comp-hist'),
     createdAt: now(),
     addedBy: currentUserRole || 'Staff',
     ...record,
   };
-  records.unshift(entry);
-  saveCompanyHistory(records);
+  insertCompanyHistory(entry).catch(console.error);
   return entry;
 };
 
@@ -147,8 +120,8 @@ export const syncHistoryWithPanelData = (medicines = [], companies = [], current
   const inventoryRecords = generateInventoryHistoryFromMedicines(medicines, currentUserRole);
   const companyRecords = generateCompanyHistoryFromCompanies(companies, currentUserRole);
 
-  saveInventoryHistory(inventoryRecords);
-  saveCompanyHistory(companyRecords);
+  inventoryRecords.forEach(entry => insertInventoryHistory(entry).catch(console.error));
+  companyRecords.forEach(entry => insertCompanyHistory(entry).catch(console.error));
 
   return {
     inventoryRecords,

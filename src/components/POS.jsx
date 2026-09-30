@@ -166,8 +166,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
 
   // Calculations
   const subtotal = salePlan.reduce((sum, line) => sum + Number(line.lineTotal || 0), 0);
-  const calculatedTax = (subtotal - discount) > 0 ? (subtotal - discount) * 0.05 : 0; // 5% VAT
-  const total = Math.max(0, subtotal - discount + calculatedTax);
+  const total = Math.max(0, subtotal - discount);
   const enteredPayment = Number(cashReceived || 0);
   const cashAmount = Math.min(Math.max(0, enteredPayment), total);
   const remainingDue = Math.max(0, total - cashAmount);
@@ -251,8 +250,7 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
       });
 
       const calculatedSubtotal = salePlan.reduce((sum, line) => sum + Number(line.lineTotal || 0), 0);
-      const calculatedTax = (calculatedSubtotal - discount) > 0 ? (calculatedSubtotal - discount) * 0.05 : 0;
-      const calculatedTotal = Math.max(0, calculatedSubtotal - discount + calculatedTax);
+      const calculatedTotal = Math.max(0, calculatedSubtotal - discount);
       const enteredPayment = Number(cashReceived || 0);
       const cashAmount = Math.min(Math.max(0, enteredPayment), calculatedTotal);
       const changeGiven = Math.max(0, cashAmount - calculatedTotal);
@@ -269,7 +267,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
         items: transactionItems,
         subtotal: calculatedSubtotal,
         discount,
-        tax: calculatedTax,
         total: calculatedTotal,
         cashReceived: cashAmount,
         changeGiven,
@@ -556,11 +553,6 @@ export default function POS({ medicines, updateMedicinesStock, onCheckoutSuccess
                   }}
                 />
               </div>
-            </div>
-
-            <div className="summary-row">
-              <span>{t.pos.tax}</span>
-              <span>৳ {calculatedTax.toFixed(2)}</span>
             </div>
 
             <div className="summary-row grand-total-row">
